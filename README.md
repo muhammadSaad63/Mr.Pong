@@ -1,2 +1,9 @@
-# Mr.Pong
-a PvAI Pong game i tried to make in cpp + raylib.
+# Mr. Pong 🏓
+=> the classic Pong which I tried to recreate in C++ using raylib. :D
+
+---
+
+### Features
+-  scoring
+-  PvAI
+-  
