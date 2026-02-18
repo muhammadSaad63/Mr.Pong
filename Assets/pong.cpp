@@ -185,9 +185,16 @@ class Game{
         Sound computerScoreSFX;
         // Sound powerUpSFX;
 
+        // menu
+        int menuTextSize;
+        int menuButtonWidth;
+        int menuButtonHeight;
+        Color menuColor1;       // no use currently
+        Color menuColor2;
+
     public:
         Game(Ball &ball, Paddle &player, ComputerPaddle &computer, const Color color)
-        : ball(ball), player(player), computer(computer), color(color), playerScore(0), computerScore(0), fontSize(300), gameState(MENU), elapsedTime(0), pauseStartTime(0), pauseDuration(3)
+        : ball(ball), player(player), computer(computer), color(color), playerScore(0), computerScore(0), fontSize(300), gameState(MENU), elapsedTime(0), pauseStartTime(0), pauseDuration(3), menuButtonWidth(500), menuButtonHeight(100), menuColor1(GOLD),menuColor2(DARKBLUE)
         {
             InitAudioDevice();
 
@@ -205,16 +212,28 @@ class Game{
             CloseAudioDevice();
         }
 
-        void reset(){
-            this->ball.reset();
-            this->player.reset();
-            this->computer.reset();
-        }
         void drawMenu(){
+            // text
+            int textSize {140};
+            DrawText(TextFormat("Mr. Pong :)"), GetScreenWidth()/2 - MeasureText(TextFormat("Mr. Pong :)"), textSize)/2, GetScreenHeight()/5 - textSize/2, textSize, GOLD); 
 
+            // play button
+            DrawRectangleGradientH(GetScreenWidth()/2 - this->menuButtonWidth/2, GetScreenHeight()/2 - this->menuButtonHeight/2 + 50, this->menuButtonWidth, this->menuButtonHeight, GOLD, MAROON);
+            DrawText(TextFormat("Play"), GetScreenWidth()/2 - MeasureText(TextFormat("Play"), this->menuTextSize)/2, (GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + (this->menuButtonHeight - this->menuTextSize)/2, this->menuTextSize, BLACK);         // this took long...
         }
         void updateMenu(){
-
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 - this->menuButtonWidth/2), (float)(GetScreenHeight()/2 - this->menuButtonHeight/2 + 50), (float) this->menuButtonWidth, (float) this->menuButtonHeight})){
+                this->menuTextSize = 83;
+                SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+            
+                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+                    this->gameState = PLAY;
+                }
+            }
+            else{ 
+                this->menuTextSize = 63;
+                SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+            }
         }
         void drawPlay(){
 
@@ -318,13 +337,21 @@ class Game{
         void drawGameOver(){
             
         }
+        void updateGameOver(){
+            
+        }
+        void reset(){
+            this->ball.reset();
+            this->player.reset();
+            this->computer.reset();
+        }
         void draw(){
             // clearing background
             ClearBackground(BLANK);
 
             switch(this->gameState)
             {
-                // case MENU:     { drawMenu();     break; }
+                case MENU:     { drawMenu();     break; }
                 // case PLAY:     { drawPlay();     break; }
                 // case SETTINGS: { drawSettings(); break; }
                 // case HELP:     { drawHelp();     break; }
@@ -337,7 +364,7 @@ class Game{
         void update(){
             switch(this->gameState)
             {
-                // case MENU:     { updateMenu();     break; }
+                case MENU:     { updateMenu();     break; }
                 // case PLAY:     { updatePlay();     break; }
                 // case SETTINGS: { updateSettings(); break; }
                 // case HELP:     { updateHelp();     break; }
