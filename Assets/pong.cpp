@@ -1,11 +1,34 @@
 #include <string>
 #include <raylib.h>
 
-class Ball
-{
+/*
+    TODO
+        - powerups
+        - menu
+        - gamepause
+        - win condition
+        - replay
+*/
+
+enum GameState{
+    // mainMenu
+    MENU      = 1,      // main menu screen
+    PLAY      = 2,      // - play menu
+    SETTINGS  = 3,      // - setting menu
+    HELP      = 4,      // - help menu
+
+    // gameOn
+    PLAYING   = 5,      // game playing
+    WAIT      = 6,      // wait after score
+    PAUSED    = 7,      // game paused
+    GAMEOVER  = 8       // gameover 
+};
+enum LastScorer{
+    PLAYER, 
+    COMPUTER
+};
+class Ball{
     private:
-        const int screenWidth;
-        const int screenHeight;
         const int radius;
         const int baseSpeed;
         int positionX;
@@ -16,15 +39,15 @@ class Ball
         const Color outerColor;
 
     public:
-        Ball(const int screenWidth, const int screenHeight, const int radius, const int baseSpeed, const Color innerColor, const Color outerColor)
-            : screenWidth(screenWidth), screenHeight(screenHeight), positionX(screenWidth / 2), positionY(screenHeight / 2), radius(radius), baseSpeed(baseSpeed), innerColor(innerColor), outerColor(outerColor){
+        Ball(const int radius, const int baseSpeed, const Color innerColor, const Color outerColor)
+            : positionX(GetScreenWidth() / 2), positionY(GetScreenHeight() / 2), radius(radius), baseSpeed(baseSpeed), innerColor(innerColor), outerColor(outerColor){
             this->velocityX = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1));
             this->velocityY = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1)); // to randomize directions
         }
 
         void reset(){
-            this->positionX = screenWidth / 2;
-            this->positionY = screenHeight / 2;
+            this->positionX = GetScreenWidth() / 2;
+            this->positionY = GetScreenHeight() / 2;
 
             // to randomize directions
             this->velocityX = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1));
@@ -32,12 +55,12 @@ class Ball
         }
         void update(){
             this->positionX += this->velocityX;
-            if (((this->positionX - this->radius) <= 0) || ((this->positionX + this->radius) >= this->screenWidth)){
-                this->velocityX *= -1; // reversing component's direction vector
+            if (((this->positionX - this->radius) <= 0) || ((this->positionX + this->radius) >= GetScreenWidth())){
+                this->velocityX *= -1;                          // reversing component's direction vector
             }
 
             this->positionY += this->velocityY;
-            if (((this->positionY - this->radius) <= 0) || ((this->positionY + this->radius) >= this->screenHeight)){
+            if (((this->positionY - this->radius) <= 0) || ((this->positionY + this->radius) >= GetScreenHeight())){
                 this->velocityY *= -1;
             }
         }
@@ -45,7 +68,7 @@ class Ball
             DrawCircleGradient(this->positionX, this->positionY, this->radius, this->innerColor, this->outerColor);
         }
         Vector2 getCenter(){
-            return Vector2{(float)this->positionX, (float)this->positionY};
+            return Vector2{(float) this->positionX, (float) this->positionY};
         }
         int getRadius(){
             return this->radius;
@@ -59,8 +82,6 @@ class Ball
 };
 class Paddle{
     protected:
-        const int screenWidth;
-        const int screenHeight;
         int positionX;
         int positionY;
         int velocityY;
@@ -71,27 +92,27 @@ class Paddle{
         Rectangle rectangle;
 
     public:
-        Paddle(const int screenWidth, const int screenHeight, const int velocityY, const int width, const int height, const int roundness, const Color color)
-            : screenWidth(screenWidth), screenHeight(screenHeight), width(width), height(height), roundness(roundness), velocityY(velocityY), color(color)
+        Paddle(const int velocityY, const int width, const int height, const int roundness, const Color color)
+            : width(width), height(height), roundness(roundness), velocityY(velocityY), color(color)
         {
-            this->positionX = (5 + this->width / 2); // 5 = dist from edge of screen (ie offset)
-            this->positionY = (this->screenHeight / 2 - this->height / 2);
-            this->rectangle = Rectangle{(float)this->positionX, (float)this->positionY, (float)this->width, (float)this->height};
+            this->positionX = (5 + this->width / 2);                            // 5 = dist from edge of screen (ie offset)
+            this->positionY = (GetScreenHeight() / 2 - this->height / 2);
+            this->rectangle = Rectangle{(float) this->positionX, (float) this->positionY, (float) this->width, (float) this->height};
         }
 
         void update(){
             // move up
             if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)){
-                if ((this->positionY - this->velocityY) >= 0){
-                    this->positionY -= this->velocityY;
+                if ((this->positionY  - this->velocityY) >= 0){
+                    this->positionY  -= this->velocityY;
                     this->rectangle.y = this->positionY;
                 }
             }
 
             // move down
             else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)){
-                if (((this->positionY + this->height) + this->velocityY) <= this->screenHeight){
-                    this->positionY += this->velocityY;
+                if (((this->positionY + this->height) + this->velocityY) <= GetScreenHeight()){
+                    this->positionY  += this->velocityY;
                     this->rectangle.y = this->positionY;
                 }
             }
@@ -104,40 +125,36 @@ class Paddle{
         }
         void reset(){
             this->positionX = (5 + this->width / 2); // 5 = dist from edge of screen (ie offset)
-            this->positionY = (this->screenHeight / 2 - this->height / 2);
-            this->rectangle = Rectangle{(float)this->positionX, (float)this->positionY, (float)this->width, (float)this->height};
+            this->positionY = (GetScreenHeight() / 2 - this->height / 2);
+            this->rectangle = Rectangle{(float) this->positionX, (float) this->positionY, (float) this->width, (float) this->height};
         }
 };
 class ComputerPaddle : public Paddle{
     public:
-        ComputerPaddle(const int screenWidth, const int screenHeight, const int velocityY, const int width, const int height, const int roundness, const Color color)
-            : Paddle(screenWidth, screenHeight, velocityY, width, height, roundness, color){
-            this->positionX = (this->screenWidth - this->width - (5 + this->width / 2)); // 5 + width/2 = offset: ie dist from edge of screen
+        ComputerPaddle(const int velocityY, const int width, const int height, const int roundness, const Color color)
+            : Paddle(velocityY, width, height, roundness, color){
+            this->positionX = (GetScreenWidth() - this->width - (5 + this->width / 2)); // 5 + width/2 = offset: ie dist from edge of screen
             this->rectangle.x = this->positionX;
         }
 
         void update(Vector2 ballCenter, int ballRadius){
-            if (ballCenter.y < this->positionY){
+            if ((ballCenter.x >= GetScreenWidth() / 2) && (ballCenter.y < this->positionY)){
                 this->positionY -= this->velocityY;
-                if (this->positionY < 0){
-                    this->positionY = 0;
-                }
+                if (this->positionY < 0){ this->positionY = 0; }
 
                 this->rectangle.y = this->positionY;
             }
 
-            else if (ballCenter.y > (this->positionY + this->height)){
+            else if ((ballCenter.x >= GetScreenWidth() / 2) && (ballCenter.y > (this->positionY + this->height))){
                 this->positionY += this->velocityY;
-                if ((this->positionY + this->height) > this->screenHeight){
-                    this->positionY = this->screenHeight;
-                }
+                if ((this->positionY + this->height) > GetScreenHeight()){ this->positionY = GetScreenHeight(); }
 
                 this->rectangle.y = this->positionY;
             }
         }
         void reset(){
-            this->positionX = (this->screenWidth - this->width - (5 + this->width / 2)); // 5 + width/2 = offset: ie dist from edge of screen
-            this->positionY = (this->screenHeight / 2 - this->height / 2);
+            this->positionX = (GetScreenWidth() - this->width - (5 + this->width / 2)); // 5 + width/2 = offset: ie dist from edge of screen
+            this->positionY = (GetScreenHeight() / 2 - this->height / 2);
             this->rectangle = Rectangle{(float)this->positionX, (float)this->positionY, (float)this->width, (float)this->height};
         }
 };
@@ -147,20 +164,19 @@ class PowerUp{
 };
 class Game{
     private:
-        Ball &ball;
-        Paddle &player;
-        ComputerPaddle &computer;
+        Ball& ball;
+        Paddle& player;
+        ComputerPaddle& computer;
 
-        const int screenWidth;
-        const int screenHeight;
         const int fontSize;
         const Color color;
 
+        GameState gameState;
         int elapsedTime;
         int playerScore;
         int computerScore;
+        LastScorer lastScorer;
 
-        bool isPaused;
         int pauseStartTime;
         const int pauseDuration;
 
@@ -171,7 +187,8 @@ class Game{
 
     public:
         Game(Ball &ball, Paddle &player, ComputerPaddle &computer, const Color color)
-            : ball(ball), player(player), computer(computer), color(color), screenWidth(GetScreenWidth()), screenHeight(GetScreenHeight()), playerScore(0), computerScore(0), fontSize(300), elapsedTime(0), isPaused(false), pauseStartTime(0), pauseDuration(3) {
+        : ball(ball), player(player), computer(computer), color(color), playerScore(0), computerScore(0), fontSize(300), gameState(MENU), elapsedTime(0), pauseStartTime(0), pauseDuration(3)
+        {
             InitAudioDevice();
 
             this->ballHitSFX       = LoadSound("Assets/SFX/ballHit.mp3");
@@ -192,86 +209,146 @@ class Game{
             this->ball.reset();
             this->player.reset();
             this->computer.reset();
-
-            this->isPaused = true;
-            this->pauseStartTime = GetTime();
         }
-        void update(){
-            if (!this->isPaused){
-                // ball
-                this->ball.update();
-            }
+        void drawMenu(){
 
+        }
+        void updateMenu(){
+
+        }
+        void drawPlay(){
+
+        }
+        void drawSettings(){
+
+        }
+        void drawHelp(){
+
+        }
+        void drawPlaying(){
+            // centre divider/line + circle
+            DrawRectangle(GetScreenWidth() / 2 - 5, 0, 10, GetScreenHeight() / 2 - GetScreenWidth() / 7, this->color);
+            DrawCircle(GetScreenWidth() / 2, GetScreenHeight() / 2, GetScreenWidth() / 7, this->color);
+            DrawRectangle(GetScreenWidth() / 2 - 5, GetScreenHeight() / 2 + GetScreenWidth() / 7, 10, GetScreenHeight(), this->color);
+
+            // scores
+            DrawText(TextFormat("%d", this->playerScore),       GetScreenWidth() / 4 - MeasureText(TextFormat("%d", this->playerScore),   this->fontSize) / 2, GetScreenHeight() / 2 - this->fontSize / 2, this->fontSize, this->color);
+            DrawText(TextFormat("%d", this->computerScore), 3 * GetScreenWidth() / 4 - MeasureText(TextFormat("%d", this->computerScore), this->fontSize) / 2, GetScreenHeight() / 2 - this->fontSize / 2, this->fontSize, this->color);
+
+            // elapsed time
+            DrawText(TextFormat("%d", this->elapsedTime), GetScreenWidth() / 2 - MeasureText(TextFormat("%d", this->elapsedTime), this->fontSize / 1.5) / 2, GetScreenHeight() / 2 - this->fontSize / 3, this->fontSize / 1.5, BLACK);
+        
+            // drawing objects
+            this->ball.draw();
+            this->player.draw();
+            this->computer.draw();
+        }
+        void updatePlaying(){
+            // updating ball
+            this->ball.update();
+
+            // updating paddles
             this->player.update();
             this->computer.update(this->ball.getCenter(), this->ball.getRadius());
 
-            if (!isPaused){
-                // paddle update + collision
+            // checking for paddle+ball collision
+                // player paddle
+                if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->player.getRectangle())){
+                    this->ball.reverseVelocityX();
+                    PlaySound(this->ballHitSFX);
+                }
 
-                    // player paddle
-                    if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->player.getRectangle())){
-                        this->ball.reverseVelocityX();
-                        PlaySound(this->ballHitSFX);
-                    }
+                // computer paddle
+                if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->computer.getRectangle())){
+                    this->ball.reverseVelocityX();
+                    PlaySound(this->ballHitSFX);
+                }
 
-                    // computer paddle
-                    if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->computer.getRectangle())){
-                        this->ball.reverseVelocityX();
-                        PlaySound(this->ballHitSFX);
-                    }
+            // scoring
+                // player scores
+                if ((this->ball.getCenter().x + this->ball.getRadius()) >= GetScreenWidth()){
+                    this->playerScore++;
+                    PlaySound(this->playerScoreSFX);
 
-                // scoring
+                    reset();
+                    this->lastScorer = PLAYER;
+                    this->gameState = WAIT;
+                    this->pauseStartTime = GetTime();
+                }
 
-                    // player scores
-                    if ((this->ball.getCenter().x + this->ball.getRadius()) >= this->screenWidth){
-                        this->playerScore++;
-                        PlaySound(this->playerScoreSFX);
+                // computer scores
+                if ((this->ball.getCenter().x - this->ball.getRadius()) <= 0){
+                    this->computerScore++;
+                    PlaySound(this->computerScoreSFX);
 
-                        reset();
-                    }
-
-                    // computer scores
-                    if ((this->ball.getCenter().x - this->ball.getRadius()) <= 0){
-                        this->computerScore++;
-                        PlaySound(this->computerScoreSFX);
-
-                        reset();
-                    }
+                    reset();
+                    this->lastScorer = COMPUTER;
+                    this->gameState = WAIT;
+                    this->pauseStartTime = GetTime();
+                }
+            
+            // pausing game if key 'p' pressed
+            if (IsKeyPressed(KEY_P)){
+                this->gameState = PAUSED;
             }
-
-            // elapsed time
-            this->elapsedTime = GetTime();
+        }
+        void drawPaused(){
+            const int textSize {83};
+            DrawText(TextFormat("GamePlay Paused.\nPress \"p\" to resume."), GetScreenWidth() / 2 - MeasureText(TextFormat("GamePlay Paused.\nPress 'p' to resume."), textSize) / 2, GetScreenHeight() / 2 - textSize, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
+        }
+        void updatePaused(){
+            if (IsKeyPressed(KEY_P)){
+                this->gameState = PLAYING;
+            }
+        }
+        void drawWait(){
+            // 'who scored' text
+            const int textSize {83};
+            DrawText(TextFormat("%s Scored!", (this->lastScorer == PLAYER)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
+            
+            // 'resuming in' text
+            DrawText(TextFormat("(Game Resuming in %d...)", this->pauseDuration - (this->elapsedTime - this->pauseStartTime)), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
+        }
+        void updateWait(){
+            if ((this->elapsedTime - this->pauseStartTime) >= this->pauseDuration){
+                this->gameState = PLAYING;
+                this->pauseStartTime = 0;
+            }
+        }
+        void drawGameOver(){
+            
         }
         void draw(){
             // clearing background
             ClearBackground(BLANK);
 
-            // centre divider/line + circle
-            DrawRectangle(this->screenWidth / 2 - 5, 0, 10, this->screenHeight / 2 - this->screenWidth / 7, this->color);
-            DrawCircle(this->screenWidth / 2, this->screenHeight / 2, this->screenWidth / 7, this->color);
-            DrawRectangle(this->screenWidth / 2 - 5, this->screenHeight / 2 + this->screenWidth / 7, 10, this->screenHeight, this->color);
-
-            // scores
-            DrawText(TextFormat("%d", this->playerScore),       this->screenWidth / 4 - MeasureText(TextFormat("%d", this->playerScore),   this->fontSize) / 2, this->screenHeight / 2 - this->fontSize / 2, this->fontSize, this->color);
-            DrawText(TextFormat("%d", this->computerScore), 3 * this->screenWidth / 4 - MeasureText(TextFormat("%d", this->computerScore), this->fontSize) / 2, this->screenHeight / 2 - this->fontSize / 2, this->fontSize, this->color);
-
-            // time elapsed
-            if (!isPaused){
-                DrawText(TextFormat("%d", this->elapsedTime), this->screenWidth / 2 - MeasureText(TextFormat("%d", this->elapsedTime), this->fontSize / 1.5) / 2, this->screenHeight / 2 - this->fontSize / 3, this->fontSize / 1.5, BLACK);
+            switch(this->gameState)
+            {
+                // case MENU:     { drawMenu();     break; }
+                // case PLAY:     { drawPlay();     break; }
+                // case SETTINGS: { drawSettings(); break; }
+                // case HELP:     { drawHelp();     break; }
+                case PLAYING:  { drawPlaying();  break; }
+                case PAUSED:   { drawPaused();   break; }
+                case WAIT:     { drawWait();     break; }
+                // case GAMEOVER: { drawGameOver(); break; }
+            }
+        }
+        void update(){
+            switch(this->gameState)
+            {
+                // case MENU:     { updateMenu();     break; }
+                // case PLAY:     { updatePlay();     break; }
+                // case SETTINGS: { updateSettings(); break; }
+                // case HELP:     { updateHelp();     break; }
+                case PLAYING:  { updatePlaying();  break; }
+                case PAUSED:   { updatePaused();   break; } 
+                case WAIT:     { updateWait();     break; }
+                // case GAMEOVER: { updateGameOver(); break; }
             }
 
-            this->ball.draw();
-            this->player.draw();
-            this->computer.draw();
-
-            if (this->isPaused){
-                DrawText(TextFormat("(Paused) %d...", 3 - (this->elapsedTime - this->pauseStartTime)), 5, this->screenHeight - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
-
-                if ((this->elapsedTime - this->pauseStartTime) >= this->pauseDuration){
-                    this->isPaused = false;
-                    this->pauseStartTime = 0;
-                }
-            }
+            // updating elapsed time
+            this->elapsedTime = GetTime();
         }
 };
 
@@ -292,19 +369,19 @@ int main()
 
     const int ballRadius    {35};
     const int ballBaseSpeed {10};
-    Ball ball(screenWidth, screenHeight, ballRadius, ballBaseSpeed, GOLD, MAROON);
+    Ball ball(ballRadius, ballBaseSpeed, GOLD, MAROON);
 
     const int paddleVelocityY  {11};
     const int paddleWidth      {23};
     const int paddleHeight    {135};
     const int paddleRoundness  {50};
-    Paddle player(screenWidth, screenHeight, paddleVelocityY, paddleWidth, paddleHeight, paddleRoundness, GOLD);
+    Paddle player(paddleVelocityY, paddleWidth, paddleHeight, paddleRoundness, GOLD);
 
     const int computerPaddleVelocityY   {9};
     const int computerPaddleWidth      {23};
     const int computerPaddleHeight    {135};
     const int computerPaddleRoundness  {50};
-    ComputerPaddle computer(screenWidth, screenHeight, computerPaddleVelocityY, computerPaddleWidth, computerPaddleHeight, computerPaddleRoundness, GOLD);
+    ComputerPaddle computer(computerPaddleVelocityY, computerPaddleWidth, computerPaddleHeight, computerPaddleRoundness, GOLD);
 
     Color transparentGOLD = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
 
@@ -324,4 +401,4 @@ int main()
     }
 
     CloseWindow();
-}
+} 
