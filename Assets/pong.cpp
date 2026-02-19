@@ -11,24 +11,37 @@
         - transparent background img
         - 3d version
         - animations of "mr. pong :)"
+        - group all attributes in structs
 */
 
 enum GameState{
     // mainMenu
-    MENU      = 1,      // main menu screen
-    PLAY      = 2,      // - play menu
-    SETTINGS  = 3,      // - setting menu
-    HELP      = 4,      // - help menu
+    MENU,          // main menu screen
+    PLAY,          // - play menu
+    SETTINGS,      // - setting menu
+    HELP,          // - help menu
 
     // gameOn
-    PLAYING   = 5,      // game playing
-    WAIT      = 6,      // wait after score
-    PAUSED    = 7,      // game paused
-    GAMEOVER  = 8       // gameover 
+    PLAYING,       // game playing
+    WAIT,          // wait after score
+    PAUSED,        // game paused
+    GAMEOVER       // gameover 
 };
 enum LastScorer{
-    PLAYER, 
-    COMPUTER
+    PLAYER1,       // user / player1 in PvP & PvAI
+    PLAYER2,       // player2 in PvP
+    COMPUTER1,     // computer / ai in PvAI & AIvAI
+    COMPUTER2      // computer2 in AIvAI
+};
+enum InputMode{
+    WASD,
+    ArrowKeys,
+    Mouse
+};
+enum gameMode{
+    PvP,
+    PvAI,
+    AIvAI
 };
 class Ball{
     private:
@@ -53,8 +66,8 @@ class Ball{
             this->positionY = GetScreenHeight() / 2;
 
             // to randomize directions
-            this->velocityX = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1));
-            this->velocityY = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1));
+            this->velocityX = (this->baseSpeed * (GetRandomValue(0, 1)? 1 : -1));
+            this->velocityY = (this->baseSpeed * (GetRandomValue(0, 1)? 1 : -1));
         }
         void update(){
             this->positionX += this->velocityX;
@@ -165,6 +178,28 @@ class PowerUp{
     private:
         int lastSpawnTime;
 };
+struct Menu{
+    int buttonWidth;
+    int buttonHeight;
+    int playTextSize;
+    int helpTextSize;
+    int settingsTextSize;
+};
+struct SFX{
+    Sound ballHit;
+    Sound playerScore;
+    Sound computerScore;
+    Sound powerUpSFX;
+};
+struct Play{
+
+};
+struct Help{
+
+};
+struct Settings{
+
+};
 class Game{
     private:
         Ball& ball;
@@ -183,37 +218,16 @@ class Game{
         int pauseStartTime;
         const int pauseDuration;
 
-        Sound ballHitSFX;
-        Sound playerScoreSFX;
-        Sound computerScoreSFX;
-        // Sound powerUpSFX;
+        SFX sfx;
 
         // menu
-        int menuPlayTextSize;
-        int menuButtonWidth;
-        int menuButtonHeight;
-        int menuHelpTextSize;
-        int menuSettingsTextSize;
+        Menu menu;
+        Play play;
+        Help help;
+        Settings settings;
 
-    public:
-        Game(Ball &ball, Paddle &player, ComputerPaddle &computer, const Color color)
-        : ball(ball), player(player), computer(computer), color(color), playerScore(0), computerScore(0), fontSize(300), gameState(MENU), elapsedTime(0), pauseStartTime(0), pauseDuration(3), menuButtonWidth(500), menuButtonHeight(100)
-        {
-            InitAudioDevice();
 
-            this->ballHitSFX       = LoadSound("Assets/SFX/ballHit.mp3");
-            this->playerScoreSFX   = LoadSound("Assets/SFX/playerScore.mp3");
-            this->computerScoreSFX = LoadSound("Assets/SFX/computerScore.mp3");
-            // this->powerUpSFX       = LoadSound("Assets/SFX/powerUp.mp3");
-        }
-        ~Game(){
-            UnloadSound(this->ballHitSFX);
-            UnloadSound(this->playerScoreSFX);
-            UnloadSound(this->computerScoreSFX);
-            // UnloadSound(this->powerUpSFX);
-
-            CloseAudioDevice();
-        }
+        // private functions ------------------------------------------------------
 
         void drawMenu(){
             // text
@@ -221,21 +235,21 @@ class Game{
             DrawText("Mr. Pong :)", GetScreenWidth()/2 - MeasureText("Mr. Pong :)", textSize)/2, GetScreenHeight()/5 - textSize/2, textSize, GOLD); 
 
             // play button
-            DrawRectangleGradientH(GetScreenWidth()/2 - this->menuButtonWidth/2, GetScreenHeight()/2 - this->menuButtonHeight/2 + 50, this->menuButtonWidth, this->menuButtonHeight, GOLD, MAROON);
-            DrawText("Play", GetScreenWidth()/2 - MeasureText("Play", this->menuPlayTextSize)/2, (GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + (this->menuButtonHeight - this->menuPlayTextSize)/2, this->menuPlayTextSize, BLACK);         // this took long...
+            DrawRectangleGradientH(GetScreenWidth()/2 - this->menu.buttonWidth/2, GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50, this->menu.buttonWidth, this->menu.buttonHeight, GOLD, MAROON);
+            DrawText("Play", GetScreenWidth()/2 - MeasureText("Play", this->menu.playTextSize)/2, (GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + (this->menu.buttonHeight - this->menu.playTextSize)/2, this->menu.playTextSize, BLACK);         // this took long...
 
             // help button
-            DrawRectangleGradientH(GetScreenWidth()/2 - this->menuButtonWidth/2, (GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + this->menuButtonHeight + 23, this->menuButtonWidth / 2 - 23, this->menuButtonHeight - 23, GOLD, MAROON);
-            DrawText("Help", (GetScreenWidth()/2 - this->menuButtonWidth/2) + (this->menuButtonWidth / 2 - 23 - MeasureText("Help", this->menuHelpTextSize))/2, ((GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + this->menuButtonHeight + 23) + ((this->menuButtonHeight - 23) - this->menuHelpTextSize)/2, this->menuHelpTextSize, BLACK);
+            DrawRectangleGradientH(GetScreenWidth()/2 - this->menu.buttonWidth/2, (GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + this->menu.buttonHeight + 23, this->menu.buttonWidth / 2 - 23, this->menu.buttonHeight - 23, GOLD, MAROON);
+            DrawText("Help", (GetScreenWidth()/2 - this->menu.buttonWidth/2) + (this->menu.buttonWidth / 2 - 23 - MeasureText("Help", this->menu.helpTextSize))/2, ((GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + this->menu.buttonHeight + 23) + ((this->menu.buttonHeight - 23) - this->menu.helpTextSize)/2, this->menu.helpTextSize, BLACK);
 
             // settings button; took too long...
-            DrawRectangleGradientH(GetScreenWidth()/2 + 23, (GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + this->menuButtonHeight + 23, this->menuButtonWidth / 2 - 23, this->menuButtonHeight - 23, GOLD, MAROON);
-            DrawText("Settings", (GetScreenWidth()/2 + 23) + (this->menuButtonWidth / 2 - 23 - MeasureText("Settings", this->menuSettingsTextSize))/2, ((GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + this->menuButtonHeight + 23) + ((this->menuButtonHeight - 23) - this->menuSettingsTextSize)/2, this->menuSettingsTextSize, BLACK);
+            DrawRectangleGradientH(GetScreenWidth()/2 + 23, (GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + this->menu.buttonHeight + 23, this->menu.buttonWidth / 2 - 23, this->menu.buttonHeight - 23, GOLD, MAROON);
+            DrawText("Settings", (GetScreenWidth()/2 + 23) + (this->menu.buttonWidth / 2 - 23 - MeasureText("Settings", this->menu.settingsTextSize))/2, ((GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + this->menu.buttonHeight + 23) + ((this->menu.buttonHeight - 23) - this->menu.settingsTextSize)/2, this->menu.settingsTextSize, BLACK);
         }
         void updateMenu(){
             // play button
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 - this->menuButtonWidth/2), (float)(GetScreenHeight()/2 - this->menuButtonHeight/2 + 50), (float) this->menuButtonWidth, (float) this->menuButtonHeight})){
-                this->menuPlayTextSize = 83;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 - this->menu.buttonWidth/2), (float)(GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50), (float) this->menu.buttonWidth, (float) this->menu.buttonHeight})){
+                this->menu.playTextSize = 83;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);     // no working :(
             
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -243,13 +257,13 @@ class Game{
                 }
             }
             else{ 
-                this->menuPlayTextSize = 63;
+                this->menu.playTextSize = 63;
                 SetMouseCursor(MOUSE_CURSOR_DEFAULT);
             }
 
             // help button
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 - this->menuButtonWidth/2), (float)((GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + this->menuButtonHeight + 23), (float)((this->menuButtonWidth) / 2 - 23), (float)(this->menuButtonHeight - 23)})){
-                this->menuHelpTextSize = 51;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 - this->menu.buttonWidth/2), (float)((GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + this->menu.buttonHeight + 23), (float)((this->menu.buttonWidth) / 2 - 23), (float)(this->menu.buttonHeight - 23)})){
+                this->menu.helpTextSize = 51;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
             
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -257,13 +271,13 @@ class Game{
                 }
             }
             else{ 
-                this->menuHelpTextSize = 40;
+                this->menu.helpTextSize = 40;
                 SetMouseCursor(MOUSE_CURSOR_DEFAULT);
             }
 
             // settings button
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 + 23), (float)((GetScreenHeight()/2 - this->menuButtonHeight/2 + 50) + this->menuButtonHeight + 23), (float)(this->menuButtonWidth / 2 - 23), (float)(this->menuButtonHeight - 23)})){
-                this->menuSettingsTextSize = 51;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float)(GetScreenWidth()/2 + 23), (float)((GetScreenHeight()/2 - this->menu.buttonHeight/2 + 50) + this->menu.buttonHeight + 23), (float)(this->menu.buttonWidth / 2 - 23), (float)(this->menu.buttonHeight - 23)})){
+                this->menu.settingsTextSize = 51;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
             
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -271,7 +285,7 @@ class Game{
                 }
             }
             else{ 
-                this->menuSettingsTextSize = 40;
+                this->menu.settingsTextSize = 40;
                 SetMouseCursor(MOUSE_CURSOR_DEFAULT);
             }
         }
@@ -283,7 +297,6 @@ class Game{
             // in prog
             DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, this->color);
             DrawText("Press \"esc\" to go back", 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
-
         }
         void updateSettings(){
             if (IsKeyPressed(KEY_ESCAPE)){
@@ -331,23 +344,23 @@ class Game{
                 // player paddle
                 if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->player.getRectangle())){
                     this->ball.reverseVelocityX();
-                    PlaySound(this->ballHitSFX);
+                    PlaySound(this->sfx.ballHit);
                 }
 
                 // computer paddle
                 if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->computer.getRectangle())){
                     this->ball.reverseVelocityX();
-                    PlaySound(this->ballHitSFX);
+                    PlaySound(this->sfx.ballHit);
                 }
 
             // scoring
                 // player scores
                 if ((this->ball.getCenter().x + this->ball.getRadius()) >= GetScreenWidth()){
                     this->playerScore++;
-                    PlaySound(this->playerScoreSFX);
+                    PlaySound(this->sfx.playerScore);
 
                     reset();
-                    this->lastScorer = PLAYER;
+                    this->lastScorer = PLAYER1;
                     this->gameState = WAIT;
                     this->pauseStartTime = GetTime();
                 }
@@ -355,10 +368,10 @@ class Game{
                 // computer scores
                 if ((this->ball.getCenter().x - this->ball.getRadius()) <= 0){
                     this->computerScore++;
-                    PlaySound(this->computerScoreSFX);
+                    PlaySound(this->sfx.computerScore);
 
                     reset();
-                    this->lastScorer = COMPUTER;
+                    this->lastScorer = COMPUTER1;
                     this->gameState = WAIT;
                     this->pauseStartTime = GetTime();
                 }
@@ -380,7 +393,7 @@ class Game{
         void drawWait(){
             // 'who scored' text
             const int textSize {83};
-            DrawText(TextFormat("%s Scored!", (this->lastScorer == PLAYER)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
+            DrawText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
             
             // 'resuming in' text
             DrawText(TextFormat("(Game Resuming in %d...)", this->pauseDuration - (this->elapsedTime - this->pauseStartTime)), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
@@ -402,6 +415,29 @@ class Game{
             this->player.reset();
             this->computer.reset();
         }
+
+    public:
+        Game(Ball &ball, Paddle &player, ComputerPaddle &computer, const Color color)
+        : ball(ball), player(player), computer(computer), color(color), playerScore(0), computerScore(0), fontSize(300), gameState(MENU), elapsedTime(0), pauseStartTime(0), pauseDuration(3) 
+        {
+            InitAudioDevice();
+            this->sfx.ballHit       = LoadSound("Assets/SFX/ballHit.mp3");
+            this->sfx.playerScore   = LoadSound("Assets/SFX/playerScore.mp3");
+            this->sfx.computerScore = LoadSound("Assets/SFX/computerScore.mp3");
+            // this->powerUpSFX       = LoadSound("Assets/SFX/powerUp.mp3");
+
+            menu.buttonWidth  = 500;
+            menu.buttonHeight = 100;
+        }
+        ~Game(){
+            UnloadSound(this->sfx.ballHit);
+            UnloadSound(this->sfx.playerScore);
+            UnloadSound(this->sfx.computerScore);
+            // UnloadSound(this->powerUpSFX);
+
+            CloseAudioDevice();
+        }
+
         void draw(){
             // clearing background
             ClearBackground(BLANK);
