@@ -5,14 +5,14 @@ using std::string;
 /*
     TODO
         - powerups
-        - menu
-        - gamepause
         - win condition
-        - replay
+        - replay/regame/reset
         - transparent background img
         - 3d version
         - animations of "mr. pong :)"
-        - group all attributes in structs
+        - revamp Playing class with all stuff (paddles, ball, time, etc)
+        - make a base/abstract class with priv gamestate and public constructor, draw(), and update() which inherited by all
+        - make every gameState class inherit class State
 */
 
 enum GameState{
@@ -24,7 +24,7 @@ enum GameState{
 
     // gameOn
     PLAYING,       // game playing
-    WAIT,          // wait after score
+    SCORE,         // menu after smone scores
     PAUSED,        // game paused
     GAMEOVER       // gameover 
 };
@@ -39,7 +39,7 @@ enum InputMode{
     ArrowKeys,
     Mouse
 };
-enum gameMode{
+enum GameMode{
     PvP,
     PvAI,
     AIvAI
@@ -94,7 +94,7 @@ class Ball{
             this->velocityX *= -1;
 
             // to prevent the ball from being stuck inside the paddle
-            this->positionX += ((this->velocityX > 0)? 23 : -23);
+            this->positionX += ((this->velocityX > 0)? 35 : -35);
         }
 };
 class Paddle{
@@ -179,21 +179,31 @@ class PowerUp{
     private:
         int lastSpawnTime;
 };
-class Menu{
-    private:
+class State{                                                        // abstract/base class to be inherited by all gameStates
+    protected:
         GameState& gameState;
-        string     mainText         {"Mr. Pong :D"};
-        int        mainTextSize     {140};
-        int        buttonWidth      {500};
-        int        buttonHeight     {100};
-        int        playTextSize     {63};
-        int        helpTextSize     {40};
-        int        settingsTextSize {40};
+
+    public:
+        State(GameState& gameState) : gameState(gameState) {}
+        virtual ~State() = default;
+
+        virtual void draw()   = 0;
+        virtual void update() = 0;
+};
+class Menu : public State{
+    private:
+        string mainText         {"Mr. Pong :D"};
+        int    mainTextSize     {140};
+        int    buttonWidth      {500};
+        int    buttonHeight     {100};
+        int    playTextSize     {63};
+        int    helpTextSize     {40};
+        int    settingsTextSize {40};
 
     public:
         Menu(GameState& gameState, const string& mainText, const int& mainTextSize, const int& buttonWidth, const int& buttonHeight, const int& playTextSize, const int& helpTextSize, const int& settingsTextSize) 
-        : gameState(gameState), mainText(mainText), mainTextSize(mainTextSize),buttonWidth(buttonWidth), buttonHeight(buttonHeight), playTextSize(playTextSize), helpTextSize(helpTextSize), settingsTextSize(settingsTextSize) {}
-        Menu(GameState& gameState) : gameState(gameState) {}
+        : State(gameState), mainText(mainText), mainTextSize(mainTextSize),buttonWidth(buttonWidth), buttonHeight(buttonHeight), playTextSize(playTextSize), helpTextSize(helpTextSize), settingsTextSize(settingsTextSize) {}
+        Menu(GameState& gameState) : State(gameState) {}
 
         void draw(){
             // main Text
@@ -255,12 +265,25 @@ class Menu{
             }
         }
 };
-class Help{
+class Play : public State{
     private:
-        GameState& gameState;
+        GameMode gameMode;
 
     public:
-        Help(GameState& gameState) : gameState(gameState) {}
+        Play(GameState& gameState) : State(gameState) {}
+
+        void draw(){
+
+        }
+        void update(){
+
+        }
+};
+class Help : public State{
+    private:
+
+    public:
+        Help(GameState& gameState) : State(gameState) {}
 
         void draw(){
             DrawText("Help", 23, 23, 80, GOLD);
@@ -276,12 +299,19 @@ class Help{
             }
         }
 };
-class Settings{
+class Settings : public State{
     private:
-        GameState& gameState;
+        // float     windowOpacity {0.8f};
+        // int       frameRate     {63};
+        // int       masterVolume  {0.5};
+        // bool      muteSounds    {false};
+        // InputMode player1Input  {WASD};
+        // InputMode player2Input  {ArrowKeys};
+        // bool      fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
+
 
     public:
-        Settings(GameState& gameState) : gameState(gameState) {}
+        Settings(GameState& gameState) : State(gameState) {}
 
         void draw(){
             DrawText("Settings", 23, 23, 50, GOLD);
@@ -297,18 +327,19 @@ class Settings{
             }
         }
 };
-class Playing{
+/*
+class Playing : public State{                      // this gonna take a while...
     private:
-        GameState& gameState;
+        Ball ball;
         int&       player1Score;
         int&       player2Score;
         int&       elapsedTime;
 
     public:
         Playing(GameState& gameState, int& player1Score, int& player2Score, int& elapsedTime)
-        : gameState(gameState), player1Score(player1Score), player2Score(player2Score), elapsedTime(elapsedTime) {}
+        : State(gameState), player1Score(player1Score), player2Score(player2Score), elapsedTime(elapsedTime) {}
 
-        void drawPlaying(){
+        void draw(){
             // centre divider/line + circle
             DrawRectangle(GetScreenWidth() / 2 - 5, 0, 10, GetScreenHeight() / 2 - GetScreenWidth() / 7, this->color);
             DrawCircle(GetScreenWidth() / 2, GetScreenHeight() / 2, GetScreenWidth() / 7, this->color);
@@ -326,7 +357,7 @@ class Playing{
             this->player.draw();
             this->computer.draw();
         }
-        void updatePlaying(){
+        void update(){
             // updating ball
             this->ball.update();
 
@@ -355,7 +386,7 @@ class Playing{
 
                     reset();
                     this->lastScorer = PLAYER1;
-                    this->gameState = WAIT;
+                    this->gameState = SCORE;
                     this->pauseStartTime = GetTime();
                 }
 
@@ -366,7 +397,7 @@ class Playing{
 
                     reset();
                     this->lastScorer = COMPUTER1;
-                    this->gameState = WAIT;
+                    this->gameState = SCORE;
                     this->pauseStartTime = GetTime();
                 }
             
@@ -376,13 +407,36 @@ class Playing{
             }
         }
 };
-class Paused{
+*/
+/*
+class Score : public State{
     private:
-        GameState& gameState;
+
+    public:
+        Score(GameState& gameState) : State(gameState) {}
+
+        void draw(){
+            // 'who scored' text
+            const int textSize {83};
+            DrawText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
+            
+            // 'resuming in' text
+            DrawText(TextFormat("(Game Resuming in %d...)", this->pauseDuration - (this->elapsedTime - this->pauseStartTime)), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
+        }
+        void update(){
+            if ((this->elapsedTime - this->pauseStartTime) >= this->pauseDuration){
+                this->gameState = PLAYING;
+                this->pauseStartTime = 0;
+            }
+        }
+};
+*/
+class Paused : public State{
+    private:
         int        textSize   {83};
 
     public:
-        Paused(GameState& gameState) : gameState(gameState) {}
+        Paused(GameState& gameState) : State(gameState) {}
 
         void draw(){
             DrawText("GamePlay Paused.\nPress \"p\" to resume.", GetScreenWidth() / 2 - MeasureText("GamePlay Paused.\nPress 'p' to resume.", textSize) / 2, GetScreenHeight() / 2 - textSize, textSize, Color{255, 203, 0, 83});        // thats long....;  100 here is the fontsize
@@ -393,11 +447,31 @@ class Paused{
             }
         }
 };
+class GameOver : public State{
+    private:
+
+    public:
+        GameOver(GameState& gameState) : State(gameState) {}
+
+        void draw(){
+            
+        }
+        void update(){
+            if (IsKeyPressed(KEY_ENTER)){
+                gameState = MENU;
+            }
+        }
+};
 struct SFX{
+    // Sound buttonClick;
+    // Sound someButtonHoverSound;
     Sound ballHit;
+    // Sound powerUp;
     Sound playerScore;
     Sound computerScore;
-    Sound powerUpSFX;
+    // Sound paused;
+    // Sound wait;
+    // Sound gameOver;
 };
 
 class Game{
@@ -422,39 +496,18 @@ class Game{
 
         // gameStates
             Menu menu;
-            // Play play;
+            Play play;
             Help help;
             Settings settings;
 
-            Playing playing;
+            // Playing playing;
+            // Score score;
             Paused paused;
+            GameOver gameOver;
 
 
         // private functions ------------------------------------------------------
 
-        void drawPlay(){
-
-        }
-        void drawWait(){
-            // 'who scored' text
-            const int textSize {83};
-            DrawText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
-            
-            // 'resuming in' text
-            DrawText(TextFormat("(Game Resuming in %d...)", this->pauseDuration - (this->elapsedTime - this->pauseStartTime)), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
-        }
-        void updateWait(){
-            if ((this->elapsedTime - this->pauseStartTime) >= this->pauseDuration){
-                this->gameState = PLAYING;
-                this->pauseStartTime = 0;
-            }
-        }
-        void drawGameOver(){
-            
-        }
-        void updateGameOver(){
-            
-        }
         void reset(){
             this->ball.reset();
             this->player.reset();
@@ -463,7 +516,7 @@ class Game{
 
     public:
         Game(Ball &ball, Paddle &player, ComputerPaddle &computer, const Color color)
-        : ball(ball), player(player), computer(computer), color(color), playerScore(0),paused(gameState), computerScore(0), fontSize(300), gameState(MENU), menu(gameState),  help(gameState), settings(gameState), elapsedTime(0), pauseStartTime(0), pauseDuration(3) 
+        : ball(ball), player(player), play(gameState), gameOver(gameState),computer(computer), color(color), playerScore(0),paused(gameState), computerScore(0), fontSize(300), gameState(MENU), menu(gameState),  help(gameState), settings(gameState), elapsedTime(0), pauseStartTime(0), pauseDuration(3) 
         {
             InitAudioDevice();
             this->sfx.ballHit       = LoadSound("Assets/SFX/ballHit.mp3");
@@ -487,13 +540,13 @@ class Game{
             switch(this->gameState)
             {
                 case MENU:     { menu.draw();     break; }
-                // case PLAY:     { drawPlay();     break; }
+                // case PLAY:     { play.draw();     break; }
                 case SETTINGS: { settings.draw(); break; }
                 case HELP:     { help.draw();     break; }
 
-                case PLAYING:  { drawPlaying();  break; }
+                // case PLAYING:  { playing.draw();  break; }
+                // case SCORE:     { score.draw();     break; }
                 case PAUSED:   { paused.draw();   break; }
-                case WAIT:     { drawWait();     break; }
                 // case GAMEOVER: { drawGameOver(); break; }
             }
         }
@@ -501,13 +554,13 @@ class Game{
             switch(this->gameState)
             {
                 case MENU:     { menu.update();     break; }
-                // case PLAY:     { updatePlay();     break; }
+                case PLAY:     { play.update();     break; }
                 case SETTINGS: { settings.update(); break; }
                 case HELP:     { help.update();     break; }
 
-                case PLAYING:  { updatePlaying();  break; }
+                // case PLAYING:  { playing.update();  break; }
+                // case SCORE:     { score.update();     break; }
                 case PAUSED:   { paused.update();   break; } 
-                case WAIT:     { updateWait();     break; }
                 // case GAMEOVER: { updateGameOver(); break; }
             }
 
