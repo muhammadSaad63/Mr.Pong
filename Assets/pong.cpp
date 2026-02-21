@@ -5,14 +5,10 @@ using std::string;
 /*
     TODO
         - powerups
-        - win condition
         - replay/regame/reset
         - transparent background img
         - 3d version
         - animations of "mr. pong :)"
-        - revamp Playing class with all stuff (paddles, ball, time, etc)
-        - make a base/abstract class with priv gamestate and public constructor, draw(), and update() which inherited by all
-        - make every gameState class inherit class State
 */
 
 enum GameState{
@@ -43,6 +39,11 @@ enum GameMode{
     PvP,
     PvAI,
     AIvAI
+};
+enum Winner{
+    FIRST,
+    SECOND,
+    NONE
 };
 class Ball{
     private:
@@ -228,7 +229,8 @@ class Menu : public State{
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);     // no working :(
             
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-                    gameState = PLAY;
+                    // gameState = PLAY;
+                    gameState = PLAYING;
                 }
             }
             else{ 
@@ -267,7 +269,7 @@ class Menu : public State{
 };
 class Play : public State{
     private:
-        GameMode gameMode;
+        GameMode gameMode {PvAI};
 
     public:
         Play(GameState& gameState) : State(gameState) {}
@@ -280,23 +282,38 @@ class Play : public State{
         }
 };
 class Help : public State{
-    private:
-
     public:
         Help(GameState& gameState) : State(gameState) {}
 
         void draw(){
-            DrawText("Help", 23, 23, 80, GOLD);
+            int titleSize {80};
+            int textSize  {20};
+            int padding   {50};
 
-            // in prog
-            DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, Color{255, 203, 0, 23});
-            DrawText("Press \"Enter\" to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, Color{255, 203, 0, 83});
+            DrawText("Help", GetScreenWidth()/2 - MeasureText("Help", titleSize)/2, padding - 20, titleSize, GOLD);
+
+            // controls section
+            int y {140};
+            DrawText("Controls", padding, y, 40, GOLD); y += 60;
+            DrawText("Move Up      -  W  or  Arrow Up",   padding, y, textSize, RAYWHITE); y += 40;
+            DrawText("Move Down    -  S  or  Arrow Down", padding, y, textSize, RAYWHITE); y += 40;
+            DrawText("Pause        -  P",                 padding, y, textSize, RAYWHITE); y += 50;
+
+            // objective section
+            DrawText("Objective", padding, y, 40, GOLD); y += 60;
+            DrawText("Hit the ball past the opponent's paddle to score.", padding, y, textSize, RAYWHITE); y += 40;
+            DrawText("First to 7 points wins.",                           padding, y, textSize, RAYWHITE); y += 50;
+
+            // modes section
+            DrawText("Game Modes", padding, y, 40, GOLD); y += 60;
+            DrawText("PvAI   -  You vs Computer",       padding, y, textSize, RAYWHITE); y += 40;
+            DrawText("PvP    -  You vs a Friend",       padding, y, textSize, RAYWHITE); y += 40;
+            DrawText("AIvAI  -  Watch two AIs battle",  padding, y, textSize, RAYWHITE); y += 40;
+
+            DrawText("Press ENTER to go back", GetScreenWidth() - 10 - MeasureText("Press ENTER to go back", 30), GetScreenHeight() - 40, 30, Color{255, 203, 0, 83});
         }
-
         void update(){
-            if (IsKeyPressed(KEY_ENTER)){
-                gameState = MENU;
-            }
+            if (IsKeyPressed(KEY_ENTER)) gameState = MENU;
         }
 };
 class Settings : public State{
@@ -318,7 +335,7 @@ class Settings : public State{
 
             // in prog
             DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, Color{255, 203, 0, 23});
-            DrawText("Press \"Enter\" to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, Color{255, 203, 0, 83});
+            DrawText("Press ENTER to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, Color{255, 203, 0, 83});
         }
 
         void update(){
@@ -333,19 +350,23 @@ class Playing : public State{
         Paddle         player;
         ComputerPaddle computer;
         
-        int        playerScore    {0};
-        int        computerScore  {0};
+        int        playerScore   {0};
+        int        computerScore {0};
         LastScorer lastScorer;
+        Winner     winner;
+        bool roundStart = true;
         
-        int pauseStartTime  {0};
-        const int pauseDuration {3};
+        int       pauseStartTime {0};
+        const int pauseDuration  {3};
         
-        const Color color;
+        const Color color = Color{255, 203, 0, 40};
         const int   fontSize {300};
         
+        Sound roundStartSFX;
         Sound ballHitSFX;
         Sound playerScoreSFX;
         Sound computerScoreSFX;
+        Sound gameOverSFX;
 
         void reset(){
             ball.reset();
@@ -354,20 +375,24 @@ class Playing : public State{
         }
 
     public:
-        Playing(GameState& gameState, const Color color)
-        :   State(gameState), color(color),
+        Playing(GameState& gameState)
+        :   State(gameState),
             ball(35, 10, GOLD, MAROON),
             player(11, 23, 135, 50, GOLD),
             computer(9, 23, 135, 50, GOLD)
         {
+            roundStartSFX    = LoadSound("Assets/SFX/roundStart.mp3"); 
             ballHitSFX       = LoadSound("Assets/SFX/ballHit.mp3");
             playerScoreSFX   = LoadSound("Assets/SFX/playerScore.mp3");
             computerScoreSFX = LoadSound("Assets/SFX/computerScore.mp3");
+            gameOverSFX      = LoadSound("Assets/SFX/gameOver.mp3");
         }
         ~Playing(){
+            UnloadSound(roundStartSFX);
             UnloadSound(ballHitSFX);
             UnloadSound(playerScoreSFX);
             UnloadSound(computerScoreSFX);
+            UnloadSound(gameOverSFX);
         }
 
         void draw(){
@@ -375,6 +400,9 @@ class Playing : public State{
             DrawRectangle(GetScreenWidth()/2 - 5, 0, 10, GetScreenHeight()/2 - GetScreenWidth()/7, color);
             DrawCircle(GetScreenWidth()/2, GetScreenHeight()/2, GetScreenWidth()/7, color);
             DrawRectangle(GetScreenWidth()/2 - 5, GetScreenHeight()/2 + GetScreenWidth()/7, 10, GetScreenHeight(), color);
+
+            DrawText("You", 10, 10, 50, color);
+            DrawText("Computer", GetScreenWidth() - 10 - MeasureText("Computer", 50), 5, 50, color);
 
             // scores
             DrawText(TextFormat("%d", playerScore),       GetScreenWidth()/4   - MeasureText(TextFormat("%d", playerScore),   fontSize)/2, GetScreenHeight()/2 - fontSize/2, fontSize, color);
@@ -389,6 +417,12 @@ class Playing : public State{
             computer.draw();
         }
         void update(){
+            if (roundStart){
+                PlaySound(roundStartSFX);
+                roundStart = false;
+                WaitTime(1);
+            }
+
             ball.update();
             player.update();
             computer.update(ball.getCenter(), ball.getRadius());
@@ -411,6 +445,7 @@ class Playing : public State{
                 reset();
                 gameState = SCORE;
                 pauseStartTime = GetTime();
+                roundStart = true;
             }
             if ((ball.getCenter().x - ball.getRadius()) <= 0){
                 computerScore++;
@@ -419,22 +454,35 @@ class Playing : public State{
                 reset();
                 gameState = SCORE;
                 pauseStartTime = GetTime();
+                roundStart = true;
             }
 
-            if (IsKeyPressed(KEY_P)){
+            if (playerScore == 7 || computerScore == 7){
+                gameState = GAMEOVER;
+                winner = ((playerScore > computerScore)? FIRST : (playerScore == computerScore)? NONE : SECOND);
+                
+                reset();
+                PlaySound(gameOverSFX);
+            }
+            if ((gameState == PLAYING) && IsKeyPressed(KEY_P)){
                 gameState = PAUSED;
             }
         }
 
-        // called by score screen
-        LastScorer getLastScorer()    { return lastScorer; }
-        int        getPlayerScore()   { return playerScore; }
-        int        getComputerScore() { return computerScore; }
-        int        getPauseStart()    { return pauseStartTime; }
+        int        getPlayerScore()   { return playerScore;                 }
+        int        getComputerScore() { return computerScore;               }
+        void       resetScores()      { playerScore = 0; computerScore = 0; }
+        LastScorer getLastScorer()    { return lastScorer;                  }
+        int        getPauseStart()    { return pauseStartTime;              }
+        void       resetPauseStart()  { pauseStartTime = 0;                 }
+        Winner     getWinner()        { return winner;                      }
 };
 class Score : public State{
     private:
-        Playing playing;
+        Playing& playing;
+        const int textSize {83};
+        const Color color  {255, 203, 0, 83};
+        const int fontSize {300};
 
     public:
         Score(GameState& gameState, Playing& playing) : State(gameState), playing(playing) {}
@@ -442,15 +490,15 @@ class Score : public State{
         void draw(){
             // 'who scored' text
             const int textSize {83};
-            DrawText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
+            DrawText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, color);        // thats long....;  100 here is the fontsize
             
             // 'resuming in' text
-            DrawText(TextFormat("(Game Resuming in %d...)", playing.g - ((int) GetTime() - playing.getPauseStart())), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
+            DrawText(TextFormat("(Game Resuming in %d...)", 3 - ((int) GetTime() - playing.getPauseStart())), 5, GetScreenHeight() - fontSize / 8 - 5, fontSize / 8, color);
         }
         void update(){
             if (((int) GetTime() - playing.getPauseStart()) >= 3){
-                this->gameState = PLAYING;
-                // playing.getPauseStart() = 0;
+                gameState = PLAYING;
+                playing.resetPauseStart();
             }
         }
 };
@@ -472,15 +520,44 @@ class Paused : public State{
 };
 class GameOver : public State{
     private:
+        Playing&    playing;
+        const int   fontSize    {300};
+        const Color color       {255, 203, 0, 83};
+        const int   waitTime    {10};
+        int         arrivalTime {0};
+        bool        arrived     {false};
 
     public:
-        GameOver(GameState& gameState) : State(gameState) {}
+        GameOver(GameState& gameState, Playing& playing) : State(gameState), playing(playing) {}
+
+        void onEnter(){ arrivalTime = GetTime(); }   // call this when transitioning to GAMEOVER
 
         void draw(){
-            
+            if (!arrived){ arrivalTime = GetTime(); arrived = true; }
+
+            // winner text
+            string winnerText;
+            switch(playing.getWinner()){
+                case FIRST:  winnerText = "You Win! :D";    break;
+                case SECOND: winnerText = "Computer Wins."; break;
+                default:     winnerText = "It's a Draw!";   break;
+            }
+            int textSize {120};
+            DrawText(winnerText.c_str(), GetScreenWidth()/2 - MeasureText(winnerText.c_str(), textSize)/2, GetScreenHeight()/2 - textSize, textSize, GOLD);
+
+            // scores
+            const char* scoreText = TextFormat("%d  -  %d", playing.getPlayerScore(), playing.getComputerScore());
+            DrawText(scoreText, GetScreenWidth()/2 - MeasureText(scoreText, 80)/2, GetScreenHeight()/2 + 20, 80, color);
+
+            // returning to menu countdown
+            int remaining = waitTime - ((int)GetTime() - arrivalTime);
+            DrawText(TextFormat("Returning to menu in %d...  or press ENTER", remaining), 5, GetScreenHeight() - fontSize/8 - 5, fontSize/8, color);
         }
         void update(){
-            if (IsKeyPressed(KEY_ENTER)){
+            if (!arrived) return;
+
+            if (IsKeyPressed(KEY_ENTER) || ((int)GetTime() - arrivalTime) >= waitTime){
+                playing.resetScores();
                 gameState = MENU;
             }
         }
@@ -500,39 +577,32 @@ struct SFX{
 class Game{
     private:
         GameState gameState {MENU};
-        Color     color     {255, 203, 0, 23};
 
         Menu     menu       {gameState};
         Play     play       {gameState};
         Help     help       {gameState};
         Settings settings   {gameState};
-        Playing  playing    {gameState, color};
+        Playing  playing    {gameState};
         Paused   paused     {gameState};
         Score    score      {gameState, playing};
-        GameOver gameOver   {gameState};
-
+        GameOver gameOver   {gameState, playing};
 
     public:
-        Game(){
-            InitAudioDevice();
-        }
-        ~Game(){
-            CloseAudioDevice();
-        }
+        Game(){}
 
         void draw(){
             // clearing background
             ClearBackground(BLANK);
 
             switch(gameState)
-            {
+            {   
                 case MENU:     { menu.draw();     break; }
-                case PLAY:     { play.draw();     break; }
+                // case PLAY:     { play.draw();     break; }
                 case SETTINGS: { settings.draw(); break; }
                 case HELP:     { help.draw();     break; }
 
                 case PLAYING:  { playing.draw();  break; }
-                case SCORE:     { score.draw();     break; }
+                case SCORE:    { score.draw();    break; }
                 case PAUSED:   { paused.draw();   break; }
                 case GAMEOVER: { gameOver.draw(); break; }
             }
@@ -541,7 +611,7 @@ class Game{
             switch(gameState)
             {
                 case MENU:     { menu.update();     break; }
-                case PLAY:     { play.update();     break; }
+                // case PLAY:     { play.update();     break; }
                 case SETTINGS: { settings.update(); break; }
                 case HELP:     { help.update();     break; }
 
@@ -563,8 +633,9 @@ int main()
     SetTargetFPS(63);
     SetExitKey(KEY_ESCAPE);
     // SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE); // op :D
+    InitAudioDevice();
 
-    Image icon = LoadImage("Assets/Favicon/2.png");
+    Image icon = LoadImage("Assets/Favicon/1.png");
     if (icon.data){
         SetWindowIcon(icon);
         UnloadImage(icon);
@@ -605,5 +676,6 @@ int main()
         EndDrawing();
     }
 
+    CloseAudioDevice();
     CloseWindow();
 } 
