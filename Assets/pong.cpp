@@ -327,113 +327,136 @@ class Settings : public State{
             }
         }
 };
-/*
-class Playing : public State{                      // this gonna take a while...
-    private:
-        Ball ball;
-        int&       player1Score;
-        int&       player2Score;
-        int&       elapsedTime;
+class Playing : public State{
+    private:        
+        Ball           ball;
+        Paddle         player;
+        ComputerPaddle computer;
+        
+        int        playerScore    {0};
+        int        computerScore  {0};
+        LastScorer lastScorer;
+        
+        int pauseStartTime  {0};
+        const int pauseDuration {3};
+        
+        const Color color;
+        const int   fontSize {300};
+        
+        Sound ballHitSFX;
+        Sound playerScoreSFX;
+        Sound computerScoreSFX;
+
+        void reset(){
+            ball.reset();
+            player.reset();
+            computer.reset();
+        }
 
     public:
-        Playing(GameState& gameState, int& player1Score, int& player2Score, int& elapsedTime)
-        : State(gameState), player1Score(player1Score), player2Score(player2Score), elapsedTime(elapsedTime) {}
+        Playing(GameState& gameState, const Color color)
+        :   State(gameState), color(color),
+            ball(35, 10, GOLD, MAROON),
+            player(11, 23, 135, 50, GOLD),
+            computer(9, 23, 135, 50, GOLD)
+        {
+            ballHitSFX       = LoadSound("Assets/SFX/ballHit.mp3");
+            playerScoreSFX   = LoadSound("Assets/SFX/playerScore.mp3");
+            computerScoreSFX = LoadSound("Assets/SFX/computerScore.mp3");
+        }
+        ~Playing(){
+            UnloadSound(ballHitSFX);
+            UnloadSound(playerScoreSFX);
+            UnloadSound(computerScoreSFX);
+        }
 
         void draw(){
-            // centre divider/line + circle
-            DrawRectangle(GetScreenWidth() / 2 - 5, 0, 10, GetScreenHeight() / 2 - GetScreenWidth() / 7, this->color);
-            DrawCircle(GetScreenWidth() / 2, GetScreenHeight() / 2, GetScreenWidth() / 7, this->color);
-            DrawRectangle(GetScreenWidth() / 2 - 5, GetScreenHeight() / 2 + GetScreenWidth() / 7, 10, GetScreenHeight(), this->color);
+            // divider
+            DrawRectangle(GetScreenWidth()/2 - 5, 0, 10, GetScreenHeight()/2 - GetScreenWidth()/7, color);
+            DrawCircle(GetScreenWidth()/2, GetScreenHeight()/2, GetScreenWidth()/7, color);
+            DrawRectangle(GetScreenWidth()/2 - 5, GetScreenHeight()/2 + GetScreenWidth()/7, 10, GetScreenHeight(), color);
 
             // scores
-            DrawText(TextFormat("%d", this->playerScore),       GetScreenWidth() / 4 - MeasureText(TextFormat("%d", this->playerScore),   this->fontSize) / 2, GetScreenHeight() / 2 - this->fontSize / 2, this->fontSize, this->color);
-            DrawText(TextFormat("%d", this->computerScore), 3 * GetScreenWidth() / 4 - MeasureText(TextFormat("%d", this->computerScore), this->fontSize) / 2, GetScreenHeight() / 2 - this->fontSize / 2, this->fontSize, this->color);
+            DrawText(TextFormat("%d", playerScore),       GetScreenWidth()/4   - MeasureText(TextFormat("%d", playerScore),   fontSize)/2, GetScreenHeight()/2 - fontSize/2, fontSize, color);
+            DrawText(TextFormat("%d", computerScore), 3 * GetScreenWidth()/4   - MeasureText(TextFormat("%d", computerScore), fontSize)/2, GetScreenHeight()/2 - fontSize/2, fontSize, color);
 
             // elapsed time
-            DrawText(TextFormat("%d", this->elapsedTime), GetScreenWidth() / 2 - MeasureText(TextFormat("%d", this->elapsedTime), this->fontSize / 1.5) / 2, GetScreenHeight() / 2 - this->fontSize / 3, this->fontSize / 1.5, BLACK);
+            double elapsedTime {GetTime()};
+            DrawText(TextFormat("%d", (int) elapsedTime), GetScreenWidth() / 2 - MeasureText(TextFormat("%d", (int) elapsedTime), fontSize / 1.5) / 2, GetScreenHeight() / 2 - fontSize / 3, fontSize / 1.5, BLACK);
         
-            // drawing objects
-            this->ball.draw();
-            this->player.draw();
-            this->computer.draw();
+            ball.draw();
+            player.draw();
+            computer.draw();
         }
         void update(){
-            // updating ball
-            this->ball.update();
+            ball.update();
+            player.update();
+            computer.update(ball.getCenter(), ball.getRadius());
 
-            // updating paddles
-            this->player.update();
-            this->computer.update(this->ball.getCenter(), this->ball.getRadius());
-
-            // checking for paddle+ball collision
-                // player paddle
-                if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->player.getRectangle())){
-                    this->ball.reverseVelocityX();
-                    PlaySound(this->sfx.ballHit);
-                }
-
-                // computer paddle
-                if (CheckCollisionCircleRec(this->ball.getCenter(), this->ball.getRadius(), this->computer.getRectangle())){
-                    this->ball.reverseVelocityX();
-                    PlaySound(this->sfx.ballHit);
-                }
+            // collisions
+            if (CheckCollisionCircleRec(ball.getCenter(), ball.getRadius(), player.getRectangle())){
+                ball.reverseVelocityX();
+                PlaySound(ballHitSFX);
+            }
+            if (CheckCollisionCircleRec(ball.getCenter(), ball.getRadius(), computer.getRectangle())){
+                ball.reverseVelocityX();
+                PlaySound(ballHitSFX);
+            }
 
             // scoring
-                // player scores
-                if ((this->ball.getCenter().x + this->ball.getRadius()) >= GetScreenWidth()){
-                    this->playerScore++;
-                    PlaySound(this->sfx.playerScore);
+            if ((ball.getCenter().x + ball.getRadius()) >= GetScreenWidth()){
+                playerScore++;
+                PlaySound(playerScoreSFX);
+                lastScorer = PLAYER1;
+                reset();
+                gameState = SCORE;
+                pauseStartTime = GetTime();
+            }
+            if ((ball.getCenter().x - ball.getRadius()) <= 0){
+                computerScore++;
+                PlaySound(computerScoreSFX);
+                lastScorer = COMPUTER1;
+                reset();
+                gameState = SCORE;
+                pauseStartTime = GetTime();
+            }
 
-                    reset();
-                    this->lastScorer = PLAYER1;
-                    this->gameState = SCORE;
-                    this->pauseStartTime = GetTime();
-                }
-
-                // computer scores
-                if ((this->ball.getCenter().x - this->ball.getRadius()) <= 0){
-                    this->computerScore++;
-                    PlaySound(this->sfx.computerScore);
-
-                    reset();
-                    this->lastScorer = COMPUTER1;
-                    this->gameState = SCORE;
-                    this->pauseStartTime = GetTime();
-                }
-            
-            // pausing game if key 'p' pressed
             if (IsKeyPressed(KEY_P)){
-                this->gameState = PAUSED;
+                gameState = PAUSED;
             }
         }
+
+        // called by score screen
+        LastScorer getLastScorer()    { return lastScorer; }
+        int        getPlayerScore()   { return playerScore; }
+        int        getComputerScore() { return computerScore; }
+        int        getPauseStart()    { return pauseStartTime; }
 };
-*/
-/*
 class Score : public State{
     private:
+        Playing playing;
 
     public:
-        Score(GameState& gameState) : State(gameState) {}
+        Score(GameState& gameState, Playing& playing) : State(gameState), playing(playing) {}
 
         void draw(){
             // 'who scored' text
             const int textSize {83};
-            DrawText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
+            DrawText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (this->lastScorer == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, Color{this->color.r, this->color.g, this->color.b, 83});        // thats long....;  100 here is the fontsize
             
             // 'resuming in' text
-            DrawText(TextFormat("(Game Resuming in %d...)", this->pauseDuration - (this->elapsedTime - this->pauseStartTime)), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
+            DrawText(TextFormat("(Game Resuming in %d...)", playing.g - ((int) GetTime() - playing.getPauseStart())), 5, GetScreenHeight() - this->fontSize / 8 - 5, this->fontSize / 8, Color{this->color.r, this->color.g, this->color.b, 83});
         }
         void update(){
-            if ((this->elapsedTime - this->pauseStartTime) >= this->pauseDuration){
+            if (((int) GetTime() - playing.getPauseStart()) >= 3){
                 this->gameState = PLAYING;
-                this->pauseStartTime = 0;
+                // playing.getPauseStart() = 0;
             }
         }
 };
-*/
 class Paused : public State{
     private:
-        int        textSize   {83};
+        int textSize {83};
 
     public:
         Paused(GameState& gameState) : State(gameState) {}
@@ -476,60 +499,24 @@ struct SFX{
 
 class Game{
     private:
-        Ball& ball;
-        Paddle& player;
-        ComputerPaddle& computer;
+        GameState gameState {MENU};
+        Color     color     {255, 203, 0, 23};
 
-        const int fontSize;
-        const Color color;
+        Menu     menu       {gameState};
+        Play     play       {gameState};
+        Help     help       {gameState};
+        Settings settings   {gameState};
+        Playing  playing    {gameState, color};
+        Paused   paused     {gameState};
+        Score    score      {gameState, playing};
+        GameOver gameOver   {gameState};
 
-        GameState gameState;
-        int elapsedTime;
-        int playerScore;
-        int computerScore;
-        LastScorer lastScorer;
-
-        int pauseStartTime;
-        const int pauseDuration;
-
-        SFX sfx;
-
-        // gameStates
-            Menu menu;
-            Play play;
-            Help help;
-            Settings settings;
-
-            // Playing playing;
-            // Score score;
-            Paused paused;
-            GameOver gameOver;
-
-
-        // private functions ------------------------------------------------------
-
-        void reset(){
-            this->ball.reset();
-            this->player.reset();
-            this->computer.reset();
-        }
 
     public:
-        Game(Ball &ball, Paddle &player, ComputerPaddle &computer, const Color color)
-        : ball(ball), player(player), play(gameState), gameOver(gameState),computer(computer), color(color), playerScore(0),paused(gameState), computerScore(0), fontSize(300), gameState(MENU), menu(gameState),  help(gameState), settings(gameState), elapsedTime(0), pauseStartTime(0), pauseDuration(3) 
-        {
+        Game(){
             InitAudioDevice();
-            this->sfx.ballHit       = LoadSound("Assets/SFX/ballHit.mp3");
-            this->sfx.playerScore   = LoadSound("Assets/SFX/playerScore.mp3");
-            this->sfx.computerScore = LoadSound("Assets/SFX/computerScore.mp3");
-            // this->powerUpSFX       = LoadSound("Assets/SFX/powerUp.mp3");
         }
         ~Game(){
-            UnloadSound(this->sfx.ballHit);
-            UnloadSound(this->sfx.playerScore);
-            UnloadSound(this->sfx.computerScore);
-            // UnloadSound(this->powerUpSFX);
-
             CloseAudioDevice();
         }
 
@@ -537,35 +524,32 @@ class Game{
             // clearing background
             ClearBackground(BLANK);
 
-            switch(this->gameState)
+            switch(gameState)
             {
                 case MENU:     { menu.draw();     break; }
-                // case PLAY:     { play.draw();     break; }
+                case PLAY:     { play.draw();     break; }
                 case SETTINGS: { settings.draw(); break; }
                 case HELP:     { help.draw();     break; }
 
-                // case PLAYING:  { playing.draw();  break; }
-                // case SCORE:     { score.draw();     break; }
+                case PLAYING:  { playing.draw();  break; }
+                case SCORE:     { score.draw();     break; }
                 case PAUSED:   { paused.draw();   break; }
-                // case GAMEOVER: { drawGameOver(); break; }
+                case GAMEOVER: { gameOver.draw(); break; }
             }
         }
         void update(){
-            switch(this->gameState)
+            switch(gameState)
             {
                 case MENU:     { menu.update();     break; }
                 case PLAY:     { play.update();     break; }
                 case SETTINGS: { settings.update(); break; }
                 case HELP:     { help.update();     break; }
 
-                // case PLAYING:  { playing.update();  break; }
-                // case SCORE:     { score.update();     break; }
+                case PLAYING:  { playing.update();  break; }
+                case SCORE:    { score.update();    break; }
                 case PAUSED:   { paused.update();   break; } 
-                // case GAMEOVER: { updateGameOver(); break; }
+                case GAMEOVER: { gameOver.update(); break; }
             }
-
-            // updating elapsed time
-            this->elapsedTime = GetTime();
         }
 };
 
@@ -586,30 +570,32 @@ int main()
         UnloadImage(icon);
     }
 
-    const int ballRadius    {35};
-    const int ballBaseSpeed {10};
-    Ball ball(ballRadius, ballBaseSpeed, GOLD, MAROON);
+    // const int ballRadius    {35};
+    // const int ballBaseSpeed {10};
+    // Ball ball(ballRadius, ballBaseSpeed, GOLD, MAROON);
 
-    const int paddleVelocityY  {11};
-    const int paddleWidth      {23};
-    const int paddleHeight    {135};
-    const int paddleRoundness  {50};
-    Paddle player(paddleVelocityY, paddleWidth, paddleHeight, paddleRoundness, GOLD);
+    // const int paddleVelocityY  {11};
+    // const int paddleWidth      {23};
+    // const int paddleHeight    {135};
+    // const int paddleRoundness  {50};
+    // Paddle player(paddleVelocityY, paddleWidth, paddleHeight, paddleRoundness, GOLD);
 
-    const int computerPaddleVelocityY   {9};
-    const int computerPaddleWidth      {23};
-    const int computerPaddleHeight    {135};
-    const int computerPaddleRoundness  {50};
-    ComputerPaddle computer(computerPaddleVelocityY, computerPaddleWidth, computerPaddleHeight, computerPaddleRoundness, GOLD);
+    // const int computerPaddleVelocityY   {9};
+    // const int computerPaddleWidth      {23};
+    // const int computerPaddleHeight    {135};
+    // const int computerPaddleRoundness  {50};
+    // ComputerPaddle computer(computerPaddleVelocityY, computerPaddleWidth, computerPaddleHeight, computerPaddleRoundness, GOLD);
 
-    Color transparentGOLD = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
+    // Color transparentGOLD = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
 
-    Game game(ball, player, computer, transparentGOLD);
+    // Game game(ball, player, computer, transparentGOLD);
+
+    Game game;
 
     // gameLoop
     while (!WindowShouldClose()){
         // update
-        game.update();
+        game.update();        
 
         // draw
         BeginDrawing();
