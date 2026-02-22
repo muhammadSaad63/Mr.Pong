@@ -30,11 +30,11 @@ enum LastScorer{
     COMPUTER1,     // computer / ai in PvAI & AIvAI
     COMPUTER2      // computer2 in AIvAI
 };
-// enum InputMode{
-//     WASD,
-//     ArrowKeys,
-//     Mouse
-// };
+enum InputMode{
+    WASD,
+    ArrowKeys,
+    Mouse
+};
 // enum GameMode{
 //     PvP,
 //     PvAI,
@@ -44,6 +44,12 @@ enum Winner{
     FIRST,
     SECOND,
     NONE
+};
+enum Difficulty{
+    EASY       = 9,             // these nums refers to the AIs base paddle velocity
+    MEDIUM     = 10,
+    HARD       = 11,
+    IMPOSSIBLE = 12
 };
 const Color transparentGold    = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
 const Color midTransparentGold = Color{255, 203, 0, 83};         
@@ -334,21 +340,19 @@ class Help : public State{
 };
 class Settings : public State{
     private:
-        float     windowOpacity {0.8f};
-        int       frameRate     {63};
-        float       masterVolume  {0.5};
-        // bool      muteSounds    {false};
-        // InputMode player1Input  {WASD};
-        // InputMode player2Input  {ArrowKeys};
-        bool      fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
-        Difficulty  aiDifficulty {EASY};
+        bool       fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
+        int        frameRate     {63};
+        float      windowOpacity {0.8f};
+        float      masterVolume  {0.5};
+        InputMode  playerInputMode   {WASD};
+        Difficulty aiDifficulty  {EASY};
 
-        const int   posX     {23};
-        int         posY     {63};
-        const int   textSize {35};
-        const int   offSet   {100};             // gap between text/heading and option/toggler
-        const Color color    {GOLD};
-        string texts[5] = {"   FullScreen", "   FrameRate", "   Window Opacity", "   SFX Volume", "   Input Mode"};
+        const int    posX     {23};
+        int          posY     {63};
+        const int    textSize {35};
+        const int    offSet   {100};             // gap between text/heading and option/toggler
+        const Color  color    {GOLD};
+        const string texts[6] {"   FullScreen     ", "   FrameRate     ", "   Window Opacity", "   SFX Volume    ", "   Input Mode    ", "   AI Difficulty   "};
 
         Sound modifyVolumeSFX;
 
@@ -379,18 +383,23 @@ class Settings : public State{
             // window opacity
             posY += offSet;
             DrawText(texts[2].c_str(), posX, posY, textSize, color);
-            DrawText(TextFormat("%.1f", windowOpacity), posX + MeasureText(texts[2].c_str(), textSize) + offSet, posY, textSize, (windowOpacity <= 0.4)? RED : (windowOpacity <= 0.7)? ORANGE : GREEN);
+            DrawText(TextFormat("%.1f", windowOpacity), posX + MeasureText(texts[2].c_str(), textSize) + offSet, posY, textSize, (windowOpacity <= 0.4)? RED : (windowOpacity <= 0.7)? YELLOW : GREEN);
             
             // master volume
             posY += offSet;
             DrawText(texts[3].c_str(), posX, posY, textSize, color);
-            DrawText(TextFormat("%.0f%%", masterVolume * 100), posX + MeasureText(texts[3].c_str(), textSize) + offSet, posY, textSize, (masterVolume <= 0.4)? RED : (masterVolume <= 0.7)? ORANGE : GREEN);
+            DrawText(TextFormat("%.0f%%", masterVolume * 100), posX + MeasureText(texts[3].c_str(), textSize) + offSet, posY, textSize, (masterVolume <= 0.4)? RED : (masterVolume <= 0.7)? YELLOW : GREEN);
 
-            /*
-            // input mod
-            DrawText("   InputMode", posX, posY + 500, textSize, color);
-            
-            */
+            // input mode
+            posY += offSet;
+            DrawText(texts[4].c_str(), posX, posY, textSize, color);
+            // (playerInputMode == WASD)? BLUE : (playerInputMode == ArrowKeys)? PURPLE : BEIGE);      
+            DrawText(TextFormat("%s", (playerInputMode == WASD)? "WASD Keys" : (playerInputMode == ArrowKeys)? "Arrow Keys" : "Mouse Wheel"), posX + MeasureText(texts[4].c_str(), textSize) + offSet, posY, textSize, BEIGE);  
+
+            // ai difficulty
+            posY += offSet;
+            DrawText(texts[5].c_str(), posX, posY, textSize, color);
+            DrawText(TextFormat("%s", (aiDifficulty == EASY)? "Easy" : (aiDifficulty == MEDIUM)? "Medium" : (aiDifficulty == HARD)? "Hard" : "Impossible"), posX + MeasureText(texts[5].c_str(), textSize) + offSet, posY, textSize, (aiDifficulty == EASY)? GREEN : (aiDifficulty == MEDIUM)? YELLOW : (aiDifficulty == HARD)? RED : DARKPURPLE);      // or beige
 
             // DrawText("There supposed to be some stuff hee...", GetScreenWidth()/2 - MeasureText("There supposed to be some stuff here...", 40)/2, GetScreenHeight()/2, 40, midTransparentGold);
 
@@ -451,6 +460,24 @@ class Settings : public State{
                 SetMasterVolume(masterVolume);
                 PlaySound(modifyVolumeSFX);             // to test modified vol
             }
+
+            // input mode
+            posY += offSet;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[4].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Mouse Wheel", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // "Mouse Wheel" is the max width of poss values
+                playerInputMode = ((playerInputMode == WASD)? ArrowKeys : (playerInputMode == ArrowKeys)? Mouse : WASD);
+            }
+
+            // ai difficulty
+            posY += offSet;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[5].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Impossible", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // "Impossible" is the max width of poss values
+                aiDifficulty = ((aiDifficulty == EASY)? MEDIUM : (aiDifficulty == MEDIUM)? HARD : (aiDifficulty == HARD)? IMPOSSIBLE : EASY);
+            }
+        }
+        InputMode getPlayerInputMode(){
+            return playerInputMode;
+        }
+        Difficulty getAIDifficulty(){
+            return aiDifficulty;
         }
 };
 class Playing : public State{
