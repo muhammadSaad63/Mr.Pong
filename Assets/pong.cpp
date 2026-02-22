@@ -1,14 +1,21 @@
+//                                                              بسم اللہ الرحمان الرحیم  
+
 #include <string>
 #include <raylib.h>
 using std::string;
 
 /*
+    14 Feb 25:
+    Started bi-idhni-Allahi Taala
+
     TODO
         - powerups
-        - replay/regame/reset
         - transparent background img
         - 3d version
         - animations of "mr. pong :)"
+
+    22 Feb 25: 
+    Finished للہ الحمد کلہ :D
 */
 
 enum GameState{
@@ -46,10 +53,10 @@ enum Winner{
     NONE
 };
 enum Difficulty{
-    EASY       = 9,             // these nums refers to the AIs base paddle velocity
-    MEDIUM     = 10,
-    HARD       = 11,
-    IMPOSSIBLE = 12
+    EASY       = 8,             // these nums refers to the AIs base paddle velocity
+    MEDIUM     = 9,
+    HARD       = 10,
+    BOSS       = 11
 };
 const Color transparentGold    = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
 const Color midTransparentGold = Color{255, 203, 0, 83};         
@@ -117,6 +124,7 @@ class Paddle{
         const int roundness;
         const Color color;
         Rectangle rectangle;
+    
 
     public:
         Paddle(const int velocityY, const int width, const int height, const int roundness, const Color color)
@@ -127,20 +135,62 @@ class Paddle{
             this->rectangle = Rectangle{(float) this->positionX, (float) this->positionY, (float) this->width, (float) this->height};
         }
 
-        void update(){
+        void update(InputMode playerInputMode){
             // move up
-            if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)){
-                if ((this->positionY  - this->velocityY) >= 0){
-                    this->positionY  -= this->velocityY;
-                    this->rectangle.y = this->positionY;
+            switch (playerInputMode){
+                case WASD:
+                {
+                    // move up
+                    if (IsKeyDown(KEY_W)){
+                        if ((positionY  - velocityY) >= 0){
+                            positionY  -= velocityY;
+                            rectangle.y = positionY;
+                        }
+                    }
+                    // move down
+                    else if (IsKeyDown(KEY_S)){
+                        if (((positionY + height) + velocityY) <= GetScreenHeight()){
+                            positionY  += velocityY;
+                            rectangle.y = positionY;
+                        }
+                    }
+                    break;
                 }
-            }
-
-            // move down
-            else if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)){
-                if (((this->positionY + this->height) + this->velocityY) <= GetScreenHeight()){
-                    this->positionY  += this->velocityY;
-                    this->rectangle.y = this->positionY;
+                case ArrowKeys:
+                {
+                   // move up
+                    if (IsKeyDown(KEY_UP)){
+                        if ((positionY  - velocityY) >= 0){
+                            positionY  -= velocityY;
+                            rectangle.y = positionY;
+                        }
+                    }
+                    // move down
+                    else if (IsKeyDown(KEY_DOWN)){
+                        if (((positionY + height) + velocityY) <= GetScreenHeight()){
+                            positionY  += velocityY;
+                            rectangle.y = positionY;
+                        }
+                    }
+                    break;
+                }
+                case Mouse:
+                {
+                    // move up
+                    if (GetMouseWheelMove() > 0){
+                        if ((positionY  - velocityY) >= 0){
+                            positionY  -= 1.5 * velocityY;            // 1.5x since mouse scrolling is slower
+                            rectangle.y = positionY;
+                        }
+                    }
+                    // move down
+                    else if (GetMouseWheelMove() < 0){
+                        if (((positionY + height) + velocityY) <= GetScreenHeight()){
+                            positionY  += 1.5 * velocityY;
+                            rectangle.y = positionY;
+                        }
+                    }
+                    break;
                 }
             }
         }
@@ -183,6 +233,9 @@ class ComputerPaddle : public Paddle{
             this->positionX = (GetScreenWidth() - this->width - (5 + this->width / 2)); // 5 + width/2 = offset: ie dist from edge of screen
             this->positionY = (GetScreenHeight() / 2 - this->height / 2);
             this->rectangle = Rectangle{(float)this->positionX, (float)this->positionY, (float)this->width, (float)this->height};
+        }
+        void setAIDifficulty(Difficulty aiDifficulty){
+            velocityY = aiDifficulty;
         }
 };
 // class PowerUp{
@@ -340,42 +393,47 @@ class Help : public State{
 };
 class Settings : public State{
     private:
-        bool       fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
-        int        frameRate     {63};
-        float      windowOpacity {0.8f};
-        float      masterVolume  {0.5};
-        InputMode  playerInputMode   {WASD};
-        Difficulty aiDifficulty  {EASY};
+        bool       fullScreen      {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
+        int        frameRate       {63};
+        float      windowOpacity   {0.8f};
+        float      masterVolume    {0.5};
+        InputMode  playerInputMode {WASD};
+        Difficulty aiDifficulty    {EASY};
 
         const int    posX     {23};
         int          posY     {63};
         const int    textSize {35};
         const int    offSet   {100};             // gap between text/heading and option/toggler
         const Color  color    {GOLD};
-        const string texts[6] {"   FullScreen     ", "   FrameRate     ", "   Window Opacity", "   SFX Volume    ", "   Input Mode    ", "   AI Difficulty   "};
+        const string texts[6] {"   > FullScreen     ", "   > FrameRate     ", "   > Window Opacity", "   > SFX Volume    ", "   > Input Mode    ", "   > AI Difficulty   "};
 
-        Sound modifyVolumeSFX;
+        Sound settingModifySFX;
 
     public:
         Settings(GameState& gameState) : State(gameState) {
-            modifyVolumeSFX = LoadSound("Assets/SFX/modifyVolume.mp3");
+            settingModifySFX = LoadSound("Assets/SFX/settingModify.mp3");
         }
         ~Settings(){
-            UnloadSound(modifyVolumeSFX);
+            UnloadSound(settingModifySFX);
         }
 
         void draw(){
             posY = 23;
 
             // header
-            DrawText("Settings", posX, 23, 50, GOLD);
+            DrawText("Settings", posX, posY, 53, GOLD);
+
+            // instructions
+            // DrawText("Click on a setting or scroll through it to change it.", GetScreenWidth() - MeasureText("Click on a setting or scroll through it to change it.", 23), 35, 23, GOLD);
+            DrawText("Press ENTER to go back.", GetScreenWidth() - MeasureText("Press ENTER to go back.", 23) - 23, GetScreenHeight() - 50, 23, GOLD);
 
             // fullscreen
-            posY += offSet;
+            posY += (offSet + ((fullScreen)? 63 : 0));
             DrawText(texts[0].c_str(), posX, posY, textSize, color);
             DrawText(TextFormat("%s", (fullScreen)? "Enabled" : "Disabled"), posX + MeasureText(texts[0].c_str(), textSize) + 100, posY, textSize, (fullScreen)? GREEN : RED);
 
             // frame rate
+
             posY += offSet;
             DrawText(texts[1].c_str(), posX, posY, textSize, color);
             DrawText(TextFormat("%d", frameRate), posX + MeasureText(texts[1].c_str(), textSize) + 100, posY, textSize, (frameRate == 23)? RED : (frameRate == 40)? ORANGE : (frameRate == 63)? YELLOW : GREEN);
@@ -399,7 +457,7 @@ class Settings : public State{
             // ai difficulty
             posY += offSet;
             DrawText(texts[5].c_str(), posX, posY, textSize, color);
-            DrawText(TextFormat("%s", (aiDifficulty == EASY)? "Easy" : (aiDifficulty == MEDIUM)? "Medium" : (aiDifficulty == HARD)? "Hard" : "Impossible"), posX + MeasureText(texts[5].c_str(), textSize) + offSet, posY, textSize, (aiDifficulty == EASY)? GREEN : (aiDifficulty == MEDIUM)? YELLOW : (aiDifficulty == HARD)? RED : DARKPURPLE);      // or beige
+            DrawText(TextFormat("%s", (aiDifficulty == EASY)? "Easy" : (aiDifficulty == MEDIUM)? "Medium" : (aiDifficulty == HARD)? "Hard" : "Boss"), posX + MeasureText(texts[5].c_str(), textSize) + offSet, posY, textSize, (aiDifficulty == EASY)? GREEN : (aiDifficulty == MEDIUM)? YELLOW : (aiDifficulty == HARD)? RED : DARKPURPLE);      // or beige
 
             // DrawText("There supposed to be some stuff hee...", GetScreenWidth()/2 - MeasureText("There supposed to be some stuff here...", 40)/2, GetScreenHeight()/2, 40, midTransparentGold);
 
@@ -416,10 +474,10 @@ class Settings : public State{
             posY = 23;
 
             // fullscreen
-            posY += offSet;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[0].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Disabled", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){
+            posY += (offSet + ((fullScreen)? 63 : 0));
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[0].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Disabled", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove()))
+            {
                 fullScreen = !fullScreen;
-
                 if (fullScreen){
                     // SetWindowState(FLAG_FULLSCREEN_MODE);
                     SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE); // op :D
@@ -428,49 +486,62 @@ class Settings : public State{
                     ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
                     SetWindowSize(1300, 700);
                 }
+
+                PlaySound(settingModifySFX);
             }
 
             // framerate
             posY += offSet;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[1].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("123", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // 123 is the max width of poss values
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[1].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("123", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove()))          // 123 is the max width of poss values
+            {
                 frameRate = ((frameRate == 23)? 40 : (frameRate == 40)? 63 : (frameRate == 63)? 123 : 23);          // y these values? simple: me like em :)
-
+                
                 SetTargetFPS(frameRate);
+                PlaySound(settingModifySFX);
             }
 
             // window opacity
             posY += offSet;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[2].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("0.1", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // 0.1 is the max width of poss values
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[2].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("0.1", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove()))          // 0.1 is the max width of poss values
+            {
                 windowOpacity += 0.1f;
                 if (windowOpacity >= 1.1f){             // >= needed since float addition can result in smthing like 1.00001f (wahi fpn kay precision ka masla)
                     windowOpacity = 0.1f;
                 }
                 
                 SetWindowOpacity(windowOpacity);
+                PlaySound(settingModifySFX);
             }
 
             // master volume
             posY += offSet;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[3].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("100%", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // 100% is the max width of poss values
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[3].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("100%", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove()))          // 100% is the max width of poss values
+            {
                 masterVolume += 0.1f;
                 if (masterVolume >= 1.1f){             // >= needed since float addition can result in smthing like 1.00001f (wahi fpn kay precision ka masla)
                     masterVolume = 0.0f;
                 }
                 
                 SetMasterVolume(masterVolume);
-                PlaySound(modifyVolumeSFX);             // to test modified vol
+                PlaySound(settingModifySFX);             // to test modified vol
             }
 
             // input mode
             posY += offSet;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[4].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Mouse Wheel", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // "Mouse Wheel" is the max width of poss values
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[4].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Mouse Wheel", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove()))          // "Mouse Wheel" is the max width of poss values
+            {
                 playerInputMode = ((playerInputMode == WASD)? ArrowKeys : (playerInputMode == ArrowKeys)? Mouse : WASD);
+                
+                PlaySound(settingModifySFX);
             }
 
             // ai difficulty
             posY += offSet;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[5].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Impossible", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // "Impossible" is the max width of poss values
-                aiDifficulty = ((aiDifficulty == EASY)? MEDIUM : (aiDifficulty == MEDIUM)? HARD : (aiDifficulty == HARD)? IMPOSSIBLE : EASY);
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[5].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Medium", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove()))          // "medium" is the max width of poss values
+            {
+                aiDifficulty = ((aiDifficulty == EASY)? MEDIUM : (aiDifficulty == MEDIUM)? HARD : (aiDifficulty == HARD)? BOSS : EASY);
+                
+                PlaySound(settingModifySFX);
             }
         }
         InputMode getPlayerInputMode(){
@@ -482,10 +553,12 @@ class Settings : public State{
 };
 class Playing : public State{
     private:        
+        Settings& settings;
+
         const int ballBaseSpeed           {11};
         const int paddleVelocityY         {12};
         const int computerPaddleVelocityY {10};
-
+        
         Ball           ball;
         Paddle         player;
         ComputerPaddle computer;
@@ -520,11 +593,12 @@ class Playing : public State{
         }
 
     public:
-        Playing(GameState& gameState)
+        Playing(GameState& gameState, Settings& settings)
         :   State(gameState),
-            ball(35, ballBaseSpeed, GOLD, MAROON),
+            settings(settings),
+            ball(35, ballBaseSpeed, GOLD, MAROON),             // the more diff the ai/computerpaddle, the greater its velocityY
             player(paddleVelocityY, 23, 135, 50, GOLD),
-            computer(computerPaddleVelocityY, 23, 135, 50, GOLD)
+            computer(settings.getAIDifficulty(), 23, 135, 50, GOLD)
         {
             roundStartSFX    = LoadSound("Assets/SFX/roundStart.mp3"); 
             ballHitSFX       = LoadSound("Assets/SFX/ballHit.mp3");
@@ -548,8 +622,9 @@ class Playing : public State{
             DrawCircle(GetScreenWidth()/2, GetScreenHeight()/2, GetScreenWidth()/7, color);
             DrawRectangle(GetScreenWidth()/2 - 5, GetScreenHeight()/2 + GetScreenWidth()/7, 10, GetScreenHeight(), color);
 
+            // player identifiers
             DrawText("You", 10, 10, 50, color);
-            DrawText("Computer", GetScreenWidth() - 10 - MeasureText("Computer", 50), 5, 50, color);
+            DrawText("AI", GetScreenWidth() - 10 - MeasureText("AI", 50), 5, 50, color);
 
             // scores
             DrawText(TextFormat("%d", playerScore),       GetScreenWidth()/4   - MeasureText(TextFormat("%d", playerScore),   fontSize)/2, GetScreenHeight()/2 - fontSize/2, fontSize, color);
@@ -569,6 +644,7 @@ class Playing : public State{
                 elapsedTime = GetTime();
                 gameTime = 0;
                 newGame = false;
+                computer.setAIDifficulty(settings.getAIDifficulty());
             }
             if (roundStart){
                 PlaySound(roundStartSFX);
@@ -581,7 +657,7 @@ class Playing : public State{
             }
 
             ball.update();
-            player.update();
+            player.update(settings.getPlayerInputMode());
             computer.update(ball.getCenter(), ball.getRadius());
 
             // collisions
@@ -767,7 +843,7 @@ class Game{
         // Play     play       {gameState};
         Help     help       {gameState};
         Settings settings   {gameState};
-        Playing  playing    {gameState};
+        Playing  playing    {gameState, settings};
         Paused   paused     {gameState, playing};
         Score    score      {gameState, playing};
         GameOver gameOver   {gameState, playing};
@@ -847,8 +923,9 @@ int main()
     BeginDrawing();
         ClearBackground(BLANK);
         DrawText("Plz don't leave meeeee :(", GetScreenWidth()/2 - MeasureText("Plz don't leave meeeee :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
+        DrawText("Made by Saad, bi-idhni-Allahi Taala :D", 23, GetScreenHeight() - 35 - 5, 35, midTransparentGold);
     EndDrawing();
-    WaitTime(2);
+    WaitTime(2.5);
     UnloadSound(windowCloseSFX);
 
     CloseAudioDevice();
