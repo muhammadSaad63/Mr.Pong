@@ -373,6 +373,7 @@ class Playing : public State{
         LastScorer  lastScorer     {};
         Winner      winner         {NONE};
         bool        roundStart     {true};
+        bool        newGame        {true};
         
         int         pauseStartTime {0};
         const int   pauseDuration  {3};
@@ -387,7 +388,8 @@ class Playing : public State{
         Sound gamePausedSFX;
         Sound gameOverSFX;
 
-
+        double elapsedTime;
+        int    gameTime;
 
         void reset(){
             ball.reset();
@@ -432,18 +434,28 @@ class Playing : public State{
             DrawText(TextFormat("%d", computerScore), 3 * GetScreenWidth()/4   - MeasureText(TextFormat("%d", computerScore), fontSize)/2, GetScreenHeight()/2 - fontSize/2, fontSize, color);
 
             // elapsed time
-            double elapsedTime {GetTime()};
-            DrawText(TextFormat("%d", (int) elapsedTime), GetScreenWidth() / 2 - MeasureText(TextFormat("%d", (int) elapsedTime), fontSize / 1.5) / 2, GetScreenHeight() / 2 - fontSize / 3, fontSize / 1.5, BLACK);
-        
+            // double elapsedTime {GetTime()};
+            // DrawText(TextFormat("%d", (int) elapsedTime), GetScreenWidth() / 2 - MeasureText(TextFormat("%d", (int) elapsedTime), fontSize / 1.5) / 2, GetScreenHeight() / 2 - fontSize / 3, fontSize / 1.5, BLACK);
+            DrawText(TextFormat("%d", gameTime), GetScreenWidth() / 2 - MeasureText(TextFormat("%d", gameTime), fontSize / 1.5) / 2, GetScreenHeight() / 2 - fontSize / 3, fontSize / 1.5, BLACK);
+            
             ball.draw();
             player.draw();
             computer.draw();
         }
         void update(){
+            if (newGame){
+                elapsedTime = GetTime();
+                gameTime = 0;
+                newGame = false;
+            }
             if (roundStart){
                 PlaySound(roundStartSFX);
                 roundStart = false;
                 WaitTime(1);
+            }
+            if ((GetTime() - elapsedTime) >= 1.0f){
+                gameTime++;
+                elapsedTime = GetTime();
             }
 
             ball.update();
@@ -505,6 +517,8 @@ class Playing : public State{
             resetScores(); 
             resetPauseStart();
             roundStart = true;
+            newGame = true;
+            gameTime = 0;
         }
 };
 class Score : public State{
@@ -712,7 +726,7 @@ int main()
     PlaySound(windowCloseSFX);          // :D
     BeginDrawing();
         ClearBackground(BLANK);
-        DrawText("Plz don't leave me :(", GetScreenWidth()/2 - MeasureText("Plz don't leave me :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
+        DrawText("Plz don't leave meee :(", GetScreenWidth()/2 - MeasureText("Plz don't leave meee :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
     EndDrawing();
     WaitTime(2);
     UnloadSound(windowCloseSFX);
