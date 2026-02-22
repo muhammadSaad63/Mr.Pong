@@ -45,6 +45,9 @@ enum Winner{
     SECOND,
     NONE
 };
+const Color transparentGold    = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
+const Color midTransparentGold = Color{255, 203, 0, 83};         
+
 class Ball{
     private:
         const int radius;
@@ -193,22 +196,28 @@ class State{                                                        // abstract/
 };
 class Menu : public State{
     private:
-        string mainText         {"Mr. Pong :D"};
+        string mainText         {"Mr. Pong :)"};
         int    mainTextSize     {140};
         int    buttonWidth      {500};
         int    buttonHeight     {100};
         int    playTextSize     {63};
         int    helpTextSize     {40};
         int    settingsTextSize {40};
+        Sound  buttonClickSFX;
 
     public:
         Menu(GameState& gameState, const string& mainText, const int& mainTextSize, const int& buttonWidth, const int& buttonHeight, const int& playTextSize, const int& helpTextSize, const int& settingsTextSize) 
         : State(gameState), mainText(mainText), mainTextSize(mainTextSize),buttonWidth(buttonWidth), buttonHeight(buttonHeight), playTextSize(playTextSize), helpTextSize(helpTextSize), settingsTextSize(settingsTextSize) {}
-        Menu(GameState& gameState) : State(gameState) {}
+        Menu(GameState& gameState) : State(gameState) {
+            buttonClickSFX = LoadSound("Assets/SFX/buttonClick.mp3");
+        }
+        ~Menu(){
+            UnloadSound(buttonClickSFX);
+        }
 
         void draw(){
             // main Text
-            DrawText(mainText.c_str(), GetScreenWidth()/2 - MeasureText(mainText.c_str(), mainTextSize)/2, GetScreenHeight()/5 - mainTextSize/2, mainTextSize, GOLD); 
+            DrawText(mainText.c_str(), GetScreenWidth()/2 - MeasureText(mainText.c_str(), mainTextSize)/2, GetScreenHeight()/5 - mainTextSize/2 + 50, mainTextSize, GOLD); 
 
             // play button
             DrawRectangleGradientH(GetScreenWidth()/2 - buttonWidth/2, GetScreenHeight()/2 - buttonHeight/2 + 50, buttonWidth, buttonHeight, GOLD, MAROON);
@@ -231,6 +240,8 @@ class Menu : public State{
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
                     // gameState = PLAY;
                     gameState = PLAYING;
+                    PlaySound(buttonClickSFX);
+                    WaitTime(.5f);
                 }
             }
             else{ 
@@ -245,6 +256,7 @@ class Menu : public State{
             
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
                     gameState = HELP;
+                    PlaySound(buttonClickSFX);
                 }
             }
             else{ 
@@ -259,6 +271,7 @@ class Menu : public State{
             
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
                     gameState = SETTINGS;
+                    PlaySound(buttonClickSFX);
                 }
             }
             else{ 
@@ -310,7 +323,7 @@ class Help : public State{
             DrawText("PvP    -  You vs a Friend",       padding, y, textSize, RAYWHITE); y += 40;
             DrawText("AIvAI  -  Watch two AIs battle",  padding, y, textSize, RAYWHITE); y += 40;
 
-            DrawText("Press ENTER to go back", GetScreenWidth() - 10 - MeasureText("Press ENTER to go back", 30), GetScreenHeight() - 40, 30, Color{255, 203, 0, 83});
+            DrawText("Press ENTER to go back", GetScreenWidth() - 10 - MeasureText("Press ENTER to go back", 30), GetScreenHeight() - 40, 30, midTransparentGold);
         }
         void update(){
             if (IsKeyPressed(KEY_ENTER)) gameState = MENU;
@@ -333,9 +346,10 @@ class Settings : public State{
         void draw(){
             DrawText("Settings", 23, 23, 50, GOLD);
 
+            DrawText("There supposed to be some stuff here...", GetScreenWidth()/2 - MeasureText("There supposed to be some stuff here...", 40)/2, GetScreenHeight()/2, 40, midTransparentGold);
             // in prog
-            DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, Color{255, 203, 0, 23});
-            DrawText("Press ENTER to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, Color{255, 203, 0, 83});
+            DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, transparentGold);
+            DrawText("Press ENTER to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, midTransparentGold);
         }
 
         void update(){
@@ -346,27 +360,34 @@ class Settings : public State{
 };
 class Playing : public State{
     private:        
+        const int ballBaseSpeed           {11};
+        const int paddleVelocityY         {12};
+        const int computerPaddleVelocityY {10};
+
         Ball           ball;
         Paddle         player;
         ComputerPaddle computer;
         
-        int        playerScore   {0};
-        int        computerScore {0};
-        LastScorer lastScorer;
-        Winner     winner;
-        bool roundStart = true;
+        int         playerScore    {0};
+        int         computerScore  {0};
+        LastScorer  lastScorer     {};
+        Winner      winner         {NONE};
+        bool        roundStart     {true};
         
-        int       pauseStartTime {0};
-        const int pauseDuration  {3};
+        int         pauseStartTime {0};
+        const int   pauseDuration  {3};
         
-        const Color color = Color{255, 203, 0, 40};
-        const int   fontSize {300};
+        const int   fontSize       {300};
+        const Color color          {255, 203, 0, 40};
         
         Sound roundStartSFX;
         Sound ballHitSFX;
         Sound playerScoreSFX;
         Sound computerScoreSFX;
+        Sound gamePausedSFX;
         Sound gameOverSFX;
+
+
 
         void reset(){
             ball.reset();
@@ -377,14 +398,15 @@ class Playing : public State{
     public:
         Playing(GameState& gameState)
         :   State(gameState),
-            ball(35, 10, GOLD, MAROON),
-            player(11, 23, 135, 50, GOLD),
-            computer(9, 23, 135, 50, GOLD)
+            ball(35, ballBaseSpeed, GOLD, MAROON),
+            player(paddleVelocityY, 23, 135, 50, GOLD),
+            computer(computerPaddleVelocityY, 23, 135, 50, GOLD)
         {
             roundStartSFX    = LoadSound("Assets/SFX/roundStart.mp3"); 
             ballHitSFX       = LoadSound("Assets/SFX/ballHit.mp3");
             playerScoreSFX   = LoadSound("Assets/SFX/playerScore.mp3");
             computerScoreSFX = LoadSound("Assets/SFX/computerScore.mp3");
+            gamePausedSFX    = LoadSound("Assets/SFX/gamePaused.mp3");
             gameOverSFX      = LoadSound("Assets/SFX/gameOver.mp3");
         }
         ~Playing(){
@@ -392,6 +414,7 @@ class Playing : public State{
             UnloadSound(ballHitSFX);
             UnloadSound(playerScoreSFX);
             UnloadSound(computerScoreSFX);
+            UnloadSound(gamePausedSFX);
             UnloadSound(gameOverSFX);
         }
 
@@ -464,24 +487,30 @@ class Playing : public State{
                 reset();
                 PlaySound(gameOverSFX);
             }
-            if ((gameState == PLAYING) && IsKeyPressed(KEY_P)){
+            if ((gameState == PLAYING) && (!IsWindowFocused() || IsKeyPressed(KEY_P))){
                 gameState = PAUSED;
+                PlaySound(gamePausedSFX);
             }
         }
 
         int        getPlayerScore()   { return playerScore;                 }
         int        getComputerScore() { return computerScore;               }
-        void       resetScores()      { playerScore = 0; computerScore = 0; }
         LastScorer getLastScorer()    { return lastScorer;                  }
         int        getPauseStart()    { return pauseStartTime;              }
+        void       resetScores()      { playerScore = 0; computerScore = 0; }
         void       resetPauseStart()  { pauseStartTime = 0;                 }
         Winner     getWinner()        { return winner;                      }
+        void       resetAll()         { 
+            reset(); 
+            resetScores(); 
+            resetPauseStart();
+            roundStart = true;
+        }
 };
 class Score : public State{
     private:
         Playing& playing;
         const int textSize {83};
-        const Color color  {255, 203, 0, 83};
         const int fontSize {300};
 
     public:
@@ -490,10 +519,10 @@ class Score : public State{
         void draw(){
             // 'who scored' text
             const int textSize {83};
-            DrawText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, color);        // thats long....;  100 here is the fontsize
+            DrawText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, midTransparentGold);        // thats long....;  100 here is the fontsize
             
             // 'resuming in' text
-            DrawText(TextFormat("(Game Resuming in %d...)", 3 - ((int) GetTime() - playing.getPauseStart())), 5, GetScreenHeight() - fontSize / 8 - 5, fontSize / 8, color);
+            DrawText(TextFormat("(Game Resuming in %d...)", 3 - ((int) GetTime() - playing.getPauseStart())), 5, GetScreenHeight() - fontSize / 8 - 5, fontSize / 8, midTransparentGold);
         }
         void update(){
             if (((int) GetTime() - playing.getPauseStart()) >= 3){
@@ -504,17 +533,39 @@ class Score : public State{
 };
 class Paused : public State{
     private:
-        int textSize {83};
+        Playing& playing;
+        int      textSize {83};
+        Sound    gameResumedSFX;
+        Sound    gameStoppedSFX;
 
     public:
-        Paused(GameState& gameState) : State(gameState) {}
+        Paused(GameState& gameState, Playing& playing) : State(gameState), playing(playing) {
+            gameResumedSFX = LoadSound("Assets/SFX/gameResumed.mp3");
+            gameStoppedSFX = LoadSound("Assets/SFX/gameStopped.mp3");
+        }
+        ~Paused(){
+            UnloadSound(gameResumedSFX);
+            UnloadSound(gameStoppedSFX);
+        }
 
         void draw(){
-            DrawText("GamePlay Paused.\nPress \"p\" to resume.", GetScreenWidth() / 2 - MeasureText("GamePlay Paused.\nPress 'p' to resume.", textSize) / 2, GetScreenHeight() / 2 - textSize, textSize, Color{255, 203, 0, 83});        // thats long....;  100 here is the fontsize
+            // DrawText("GamePlay Paused.\n- Press \"p\" to resume.\n- Press \"x\" to finish.", GetScreenWidth() / 2 - MeasureText("GamePlay Paused.\n- Press \"p\" to resume.\n- Press \"x\" to finish.", textSize) / 2, GetScreenHeight() /2 - 3*textSize/2, textSize, GOLD);        // thats long....;  100 here is the fontsize
+            DrawText("GamePlay Paused.", GetScreenWidth() / 2 - MeasureText("GamePlay Paused.", textSize) / 2, GetScreenHeight()/2 - textSize/2 - 50, textSize, GOLD);        // thats long....;  100 here is the fontsize
+            DrawText("- Press \"p\" to resume.\n- Press \"x\" to finish.", GetScreenWidth() / 2 - MeasureText("- Press \"p\" to resume.\n- Press \"x\" to finish.", textSize/1.5) / 2, GetScreenHeight()/2 - textSize/2 - 50 + textSize + 30, textSize/1.5, midTransparentGold);
         }
         void update(){
             if (IsKeyPressed(KEY_P)){
+                PlaySound(gameResumedSFX);
+
                 gameState = PLAYING;
+                WaitTime(1);
+            }
+            if (IsKeyPressed(KEY_X)){
+                PlaySound(gameStoppedSFX);
+                
+                gameState = MENU;
+                playing.resetAll();
+                WaitTime(1);
             }
         }
 };
@@ -522,7 +573,6 @@ class GameOver : public State{
     private:
         Playing&    playing;
         const int   fontSize    {300};
-        const Color color       {255, 203, 0, 83};
         const int   waitTime    {10};
         int         arrivalTime {0};
         bool        arrived     {false};
@@ -547,11 +597,11 @@ class GameOver : public State{
 
             // scores
             const char* scoreText = TextFormat("%d  -  %d", playing.getPlayerScore(), playing.getComputerScore());
-            DrawText(scoreText, GetScreenWidth()/2 - MeasureText(scoreText, 80)/2, GetScreenHeight()/2 + 20, 80, color);
+            DrawText(scoreText, GetScreenWidth()/2 - MeasureText(scoreText, 80)/2, GetScreenHeight()/2 + 20, 80, midTransparentGold);
 
             // returning to menu countdown
             int remaining = waitTime - ((int)GetTime() - arrivalTime);
-            DrawText(TextFormat("Returning to menu in %d...  or press ENTER", remaining), 5, GetScreenHeight() - fontSize/8 - 5, fontSize/8, color);
+            DrawText(TextFormat("Returning to menu in %d...  or press ENTER", remaining), 5, GetScreenHeight() - fontSize/8 - 5, fontSize/8, midTransparentGold);
         }
         void update(){
             if (!arrived) return;
@@ -583,7 +633,7 @@ class Game{
         Help     help       {gameState};
         Settings settings   {gameState};
         Playing  playing    {gameState};
-        Paused   paused     {gameState};
+        Paused   paused     {gameState, playing};
         Score    score      {gameState, playing};
         GameOver gameOver   {gameState, playing};
 
@@ -641,25 +691,7 @@ int main()
         UnloadImage(icon);
     }
 
-    // const int ballRadius    {35};
-    // const int ballBaseSpeed {10};
-    // Ball ball(ballRadius, ballBaseSpeed, GOLD, MAROON);
-
-    // const int paddleVelocityY  {11};
-    // const int paddleWidth      {23};
-    // const int paddleHeight    {135};
-    // const int paddleRoundness  {50};
-    // Paddle player(paddleVelocityY, paddleWidth, paddleHeight, paddleRoundness, GOLD);
-
-    // const int computerPaddleVelocityY   {9};
-    // const int computerPaddleWidth      {23};
-    // const int computerPaddleHeight    {135};
-    // const int computerPaddleRoundness  {50};
-    // ComputerPaddle computer(computerPaddleVelocityY, computerPaddleWidth, computerPaddleHeight, computerPaddleRoundness, GOLD);
-
-    // Color transparentGOLD = Color{255, 203, 0, 23};         // a lighter version of the defined GOLD color
-
-    // Game game(ball, player, computer, transparentGOLD);
+    Sound windowCloseSFX = LoadSound("Assets/SFX/windowClose.mp3");
 
     Game game;
 
@@ -675,6 +707,15 @@ int main()
 
         EndDrawing();
     }
+
+    // me too farigh :) alhamdulillah
+    PlaySound(windowCloseSFX);          // :D
+    BeginDrawing();
+        ClearBackground(BLANK);
+        DrawText("Plz don't leave me :(", GetScreenWidth()/2 - MeasureText("Plz don't leave me :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
+    EndDrawing();
+    WaitTime(2);
+    UnloadSound(windowCloseSFX);
 
     CloseAudioDevice();
     CloseWindow();
