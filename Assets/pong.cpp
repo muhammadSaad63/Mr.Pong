@@ -14,7 +14,7 @@ using std::string;
 enum GameState{
     // mainMenu
     MENU,          // main menu screen
-    PLAY,          // - play menu
+    // PLAY,          // - play menu
     SETTINGS,      // - setting menu
     HELP,          // - help menu
 
@@ -30,16 +30,16 @@ enum LastScorer{
     COMPUTER1,     // computer / ai in PvAI & AIvAI
     COMPUTER2      // computer2 in AIvAI
 };
-enum InputMode{
-    WASD,
-    ArrowKeys,
-    Mouse
-};
-enum GameMode{
-    PvP,
-    PvAI,
-    AIvAI
-};
+// enum InputMode{
+//     WASD,
+//     ArrowKeys,
+//     Mouse
+// };
+// enum GameMode{
+//     PvP,
+//     PvAI,
+//     AIvAI
+// };
 enum Winner{
     FIRST,
     SECOND,
@@ -63,7 +63,7 @@ class Ball{
         Ball(const int radius, const int baseSpeed, const Color innerColor, const Color outerColor)
             : positionX(GetScreenWidth() / 2), positionY(GetScreenHeight() / 2), radius(radius), baseSpeed(baseSpeed), innerColor(innerColor), outerColor(outerColor){
             this->velocityX = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1));
-            this->velocityY = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1)); // to randomize directions
+            this->velocityY = (this->baseSpeed * (GetRandomValue(0, 1) ? 1 : -1));              // to randomize directions
         }
 
         void reset(){
@@ -179,10 +179,13 @@ class ComputerPaddle : public Paddle{
             this->rectangle = Rectangle{(float)this->positionX, (float)this->positionY, (float)this->width, (float)this->height};
         }
 };
-class PowerUp{
-    private:
-        int lastSpawnTime;
-};
+// class PowerUp{
+//     private:
+//         int lastSpawnTime;
+
+//     public:
+//         PowerUp() {}
+// };
 class State{                                                        // abstract/base class to be inherited by all gameStates
     protected:
         GameState& gameState;
@@ -237,7 +240,7 @@ class Menu : public State{
                 playTextSize = 83;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);     // no working :(
             
-                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                     // gameState = PLAY;
                     gameState = PLAYING;
                     PlaySound(buttonClickSFX);
@@ -254,7 +257,7 @@ class Menu : public State{
                 helpTextSize = 51;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
             
-                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                     gameState = HELP;
                     PlaySound(buttonClickSFX);
                 }
@@ -269,7 +272,7 @@ class Menu : public State{
                 settingsTextSize = 51;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
             
-                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
                     gameState = SETTINGS;
                     PlaySound(buttonClickSFX);
                 }
@@ -280,20 +283,20 @@ class Menu : public State{
             }
         }
 };
-class Play : public State{
-    private:
-        GameMode gameMode {PvAI};
+// class Play : public State{
+//     private:
+//         GameMode gameMode {PvAI};
 
-    public:
-        Play(GameState& gameState) : State(gameState) {}
+//     public:
+//         Play(GameState& gameState) : State(gameState) {}
 
-        void draw(){
+//         void draw(){
 
-        }
-        void update(){
+//         }
+//         void update(){
 
-        }
-};
+//         }
+// };
 class Help : public State{
     public:
         Help(GameState& gameState) : State(gameState) {}
@@ -331,31 +334,87 @@ class Help : public State{
 };
 class Settings : public State{
     private:
-        // float     windowOpacity {0.8f};
-        // int       frameRate     {63};
-        // int       masterVolume  {0.5};
+        float     windowOpacity {0.8f};
+        int       frameRate     {63};
+        float       masterVolume  {0.5};
         // bool      muteSounds    {false};
         // InputMode player1Input  {WASD};
         // InputMode player2Input  {ArrowKeys};
-        // bool      fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
+        bool      fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
 
+        const int   posX     {23};
+        int         posY     {63};
+        const int   textSize {35};
+        const Color color    {GOLD};
+        string texts[5] = {"   FullScreen", "   FrameRate", "   Window Opacity", "   SFX Volume", "   Input Mode"};
 
     public:
         Settings(GameState& gameState) : State(gameState) {}
 
         void draw(){
-            DrawText("Settings", 23, 23, 50, GOLD);
+            posY = 23;
 
-            DrawText("There supposed to be some stuff here...", GetScreenWidth()/2 - MeasureText("There supposed to be some stuff here...", 40)/2, GetScreenHeight()/2, 40, midTransparentGold);
+            // header
+            DrawText("Settings", posX, 23, 50, GOLD);
+
+            // fullscreen
+            posY += 100;
+            DrawText(texts[0].c_str(), posX, posY, textSize, color);
+            DrawText(TextFormat("%s", (fullScreen)? "Enabled" : "Disabled"), posX + MeasureText(texts[0].c_str(), textSize) + 100, posY, textSize, (fullScreen)? GREEN : RED);
+
+            // frame rate
+            posY += 100;
+            DrawText(texts[1].c_str(), posX, posY, textSize, color);
+            DrawText(TextFormat("%s", (frameRate == 23)? "23" : (frameRate == 40)? "40" : (frameRate == 63)? "63" : "123"), posX + MeasureText(texts[1].c_str(), textSize) + 100, posY, textSize, (frameRate == 23)? RED : (frameRate == 40)? ORANGE : (frameRate == 63)? YELLOW : GREEN);
+            
+            /*
+            // window opacity
+            DrawText("   Window Opacity", posX, posY + 100, textSize, color);
+            
+            // input mod
+            DrawText("   InputMode", posX, posY + 500, textSize, color);
+            
+            // master volum
+            DrawText("   SFX Volume", posX, posY + 200, textSize, color);
+            */
+
+            // DrawText("There supposed to be some stuff hee...", GetScreenWidth()/2 - MeasureText("There supposed to be some stuff here...", 40)/2, GetScreenHeight()/2, 40, midTransparentGold);
+
             // in prog
-            DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, transparentGold);
-            DrawText("Press ENTER to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, midTransparentGold);
+            // DrawRectangle((GetScreenWidth() - GetScreenHeight()/1.5)/2, GetScreenHeight()/4, GetScreenWidth()/1.5, GetScreenHeight()/2, transparentGold);
+            // DrawText("Press ENTER to go back", 5, GetScreenHeight() - 300 / 8 - 5, 300 / 8, midTransparentGold);
         }
 
         void update(){
             if (IsKeyPressed(KEY_ENTER)){
                 gameState = MENU;
             }
+
+            posY = 23;
+
+            // fullscreen
+            posY += 100;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[0].c_str(), textSize) + 100, (float) posY, (float) MeasureText("Disabled", textSize), (float) textSize}) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+                fullScreen = !fullScreen;
+
+                if (fullScreen){
+                    // SetWindowState(FLAG_FULLSCREEN_MODE);
+                    SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE); // op :D
+                }
+                else{
+                    ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+                    SetWindowSize(1300, 700);
+                }
+            }
+
+            // framerate
+            posY += 100;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[1].c_str(), textSize) + 100, (float) posY, (float) MeasureText("123", textSize), (float) textSize}) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){          // 123 is the max width of poss values
+                frameRate = ((frameRate == 23)? 40 : (frameRate == 40)? 63 : (frameRate == 63)? 123 : 23);
+
+                SetTargetFPS(frameRate);
+            }
+
         }
 };
 class Playing : public State{
@@ -532,7 +591,6 @@ class Score : public State{
 
         void draw(){
             // 'who scored' text
-            const int textSize {83};
             DrawText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), GetScreenWidth() / 2 - MeasureText(TextFormat("%s Scored!", (playing.getLastScorer() == PLAYER1)? "You" : "Computer"), textSize)/2, GetScreenHeight()/2 - textSize/2, textSize, midTransparentGold);        // thats long....;  100 here is the fontsize
             
             // 'resuming in' text
@@ -594,8 +652,6 @@ class GameOver : public State{
     public:
         GameOver(GameState& gameState, Playing& playing) : State(gameState), playing(playing) {}
 
-        void onEnter(){ arrivalTime = GetTime(); }   // call this when transitioning to GAMEOVER
-
         void draw(){
             if (!arrived){ arrivalTime = GetTime(); arrived = true; }
 
@@ -620,8 +676,10 @@ class GameOver : public State{
         void update(){
             if (!arrived) return;
 
-            if (IsKeyPressed(KEY_ENTER) || ((int)GetTime() - arrivalTime) >= waitTime){
-                playing.resetScores();
+            if (IsKeyPressed(KEY_ENTER) || ((int) GetTime() - arrivalTime) >= waitTime){
+                playing.resetAll();
+                arrived = false;
+    
                 gameState = MENU;
             }
         }
@@ -643,7 +701,7 @@ class Game{
         GameState gameState {MENU};
 
         Menu     menu       {gameState};
-        Play     play       {gameState};
+        // Play     play       {gameState};
         Help     help       {gameState};
         Settings settings   {gameState};
         Playing  playing    {gameState};
@@ -696,10 +754,9 @@ int main()
     SetWindowOpacity(0.8);
     SetTargetFPS(63);
     SetExitKey(KEY_ESCAPE);
-    // SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE); // op :D
     InitAudioDevice();
 
-    Image icon = LoadImage("Assets/Favicon/1.png");
+    Image icon = LoadImage("Assets/Favicon/2.png");
     if (icon.data){
         SetWindowIcon(icon);
         UnloadImage(icon);
@@ -726,7 +783,7 @@ int main()
     PlaySound(windowCloseSFX);          // :D
     BeginDrawing();
         ClearBackground(BLANK);
-        DrawText("Plz don't leave meee :(", GetScreenWidth()/2 - MeasureText("Plz don't leave meee :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
+        DrawText("Plz don't leave meeeee :(", GetScreenWidth()/2 - MeasureText("Plz don't leave meeeee :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
     EndDrawing();
     WaitTime(2);
     UnloadSound(windowCloseSFX);
