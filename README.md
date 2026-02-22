@@ -3,7 +3,12 @@
 
 ---
 
-### Features
--  scoring
+### Features ℹ️
+-  menu
+-  help
+-  settings
 -  PvAI
--  
+-  SFX 
+-  animations
+-  replay
+-  and much much more! :)
