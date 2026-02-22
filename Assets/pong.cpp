@@ -341,15 +341,24 @@ class Settings : public State{
         // InputMode player1Input  {WASD};
         // InputMode player2Input  {ArrowKeys};
         bool      fullScreen    {false};         // setwindowstate(FLAG_BORDERLESS_WINDOWED_MODE); ClearWindowState(); SetWindowSize();
+        Difficulty  aiDifficulty {EASY};
 
         const int   posX     {23};
         int         posY     {63};
         const int   textSize {35};
+        const int   offSet   {100};             // gap between text/heading and option/toggler
         const Color color    {GOLD};
         string texts[5] = {"   FullScreen", "   FrameRate", "   Window Opacity", "   SFX Volume", "   Input Mode"};
 
+        Sound modifyVolumeSFX;
+
     public:
-        Settings(GameState& gameState) : State(gameState) {}
+        Settings(GameState& gameState) : State(gameState) {
+            modifyVolumeSFX = LoadSound("Assets/SFX/modifyVolume.mp3");
+        }
+        ~Settings(){
+            UnloadSound(modifyVolumeSFX);
+        }
 
         void draw(){
             posY = 23;
@@ -358,24 +367,29 @@ class Settings : public State{
             DrawText("Settings", posX, 23, 50, GOLD);
 
             // fullscreen
-            posY += 100;
+            posY += offSet;
             DrawText(texts[0].c_str(), posX, posY, textSize, color);
             DrawText(TextFormat("%s", (fullScreen)? "Enabled" : "Disabled"), posX + MeasureText(texts[0].c_str(), textSize) + 100, posY, textSize, (fullScreen)? GREEN : RED);
 
             // frame rate
-            posY += 100;
+            posY += offSet;
             DrawText(texts[1].c_str(), posX, posY, textSize, color);
-            DrawText(TextFormat("%s", (frameRate == 23)? "23" : (frameRate == 40)? "40" : (frameRate == 63)? "63" : "123"), posX + MeasureText(texts[1].c_str(), textSize) + 100, posY, textSize, (frameRate == 23)? RED : (frameRate == 40)? ORANGE : (frameRate == 63)? YELLOW : GREEN);
+            DrawText(TextFormat("%d", frameRate), posX + MeasureText(texts[1].c_str(), textSize) + 100, posY, textSize, (frameRate == 23)? RED : (frameRate == 40)? ORANGE : (frameRate == 63)? YELLOW : GREEN);
             
-            /*
             // window opacity
-            DrawText("   Window Opacity", posX, posY + 100, textSize, color);
+            posY += offSet;
+            DrawText(texts[2].c_str(), posX, posY, textSize, color);
+            DrawText(TextFormat("%.1f", windowOpacity), posX + MeasureText(texts[2].c_str(), textSize) + offSet, posY, textSize, (windowOpacity <= 0.4)? RED : (windowOpacity <= 0.7)? ORANGE : GREEN);
             
+            // master volume
+            posY += offSet;
+            DrawText(texts[3].c_str(), posX, posY, textSize, color);
+            DrawText(TextFormat("%.0f%%", masterVolume * 100), posX + MeasureText(texts[3].c_str(), textSize) + offSet, posY, textSize, (masterVolume <= 0.4)? RED : (masterVolume <= 0.7)? ORANGE : GREEN);
+
+            /*
             // input mod
             DrawText("   InputMode", posX, posY + 500, textSize, color);
             
-            // master volum
-            DrawText("   SFX Volume", posX, posY + 200, textSize, color);
             */
 
             // DrawText("There supposed to be some stuff hee...", GetScreenWidth()/2 - MeasureText("There supposed to be some stuff here...", 40)/2, GetScreenHeight()/2, 40, midTransparentGold);
@@ -393,8 +407,8 @@ class Settings : public State{
             posY = 23;
 
             // fullscreen
-            posY += 100;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[0].c_str(), textSize) + 100, (float) posY, (float) MeasureText("Disabled", textSize), (float) textSize}) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+            posY += offSet;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[0].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("Disabled", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){
                 fullScreen = !fullScreen;
 
                 if (fullScreen){
@@ -408,13 +422,35 @@ class Settings : public State{
             }
 
             // framerate
-            posY += 100;
-            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[1].c_str(), textSize) + 100, (float) posY, (float) MeasureText("123", textSize), (float) textSize}) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){          // 123 is the max width of poss values
-                frameRate = ((frameRate == 23)? 40 : (frameRate == 40)? 63 : (frameRate == 63)? 123 : 23);
+            posY += offSet;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[1].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("123", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // 123 is the max width of poss values
+                frameRate = ((frameRate == 23)? 40 : (frameRate == 40)? 63 : (frameRate == 63)? 123 : 23);          // y these values? simple: me like em :)
 
                 SetTargetFPS(frameRate);
             }
 
+            // window opacity
+            posY += offSet;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[2].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("0.1", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // 0.1 is the max width of poss values
+                windowOpacity += 0.1f;
+                if (windowOpacity >= 1.1f){             // >= needed since float addition can result in smthing like 1.00001f (wahi fpn kay precision ka masla)
+                    windowOpacity = 0.1f;
+                }
+                
+                SetWindowOpacity(windowOpacity);
+            }
+
+            // master volume
+            posY += offSet;
+            if (CheckCollisionPointRec(GetMousePosition(), Rectangle{(float) posX + MeasureText(texts[3].c_str(), textSize) + offSet, (float) posY, (float) MeasureText("100%", textSize), (float) textSize}) && (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || GetMouseWheelMove())){          // 100% is the max width of poss values
+                masterVolume += 0.1f;
+                if (masterVolume >= 1.1f){             // >= needed since float addition can result in smthing like 1.00001f (wahi fpn kay precision ka masla)
+                    masterVolume = 0.0f;
+                }
+                
+                SetMasterVolume(masterVolume);
+                PlaySound(modifyVolumeSFX);             // to test modified vol
+            }
         }
 };
 class Playing : public State{
