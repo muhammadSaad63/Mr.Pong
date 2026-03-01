@@ -839,14 +839,14 @@ class Game{
     private:
         GameState gameState {MENU};
 
-        Menu     menu       {gameState};
+        Menu     menu       {gameState          };
         // Play     play       {gameState};
-        Help     help       {gameState};
-        Settings settings   {gameState};
+        Help     help       {gameState          };
+        Settings settings   {gameState          };
         Playing  playing    {gameState, settings};
-        Paused   paused     {gameState, playing};
-        Score    score      {gameState, playing};
-        GameOver gameOver   {gameState, playing};
+        Paused   paused     {gameState, playing };
+        Score    score      {gameState, playing };
+        GameOver gameOver   {gameState, playing };
 
     public:
         Game(){}
@@ -882,6 +882,21 @@ class Game{
                 case GAMEOVER: { gameOver.update(); break; }
             }
         }
+        void end(){
+            // me too farigh :) alhamdulillah
+
+            Sound windowCloseSFX = LoadSound("Assets/SFX/windowClose.mp3");
+            PlaySound(windowCloseSFX);          // :D
+
+            BeginDrawing();
+                ClearBackground(BLANK);
+                DrawText("Plz don't leave meeeee :(", GetScreenWidth()/2 - MeasureText("Plz don't leave meeeee :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
+                DrawText("Made by Saad, bi-idhni-Allahi Taala :D", 23, GetScreenHeight() - 35 - 5, 35, midTransparentGold);
+            EndDrawing();
+
+            WaitTime(2.5);
+            UnloadSound(windowCloseSFX);
+        }
 };
 
 int main()
@@ -901,7 +916,6 @@ int main()
         UnloadImage(icon);
     }
 
-    Sound windowCloseSFX = LoadSound("Assets/SFX/windowClose.mp3");
 
     Game game;
 
@@ -918,15 +932,7 @@ int main()
         EndDrawing();
     }
 
-    // me too farigh :) alhamdulillah
-    PlaySound(windowCloseSFX);          // :D
-    BeginDrawing();
-        ClearBackground(BLANK);
-        DrawText("Plz don't leave meeeee :(", GetScreenWidth()/2 - MeasureText("Plz don't leave meeeee :(", 63)/2, GetScreenHeight()/2 - 63/2, 63, GOLD);
-        DrawText("Made by Saad, bi-idhni-Allahi Taala :D", 23, GetScreenHeight() - 35 - 5, 35, midTransparentGold);
-    EndDrawing();
-    WaitTime(2.5);
-    UnloadSound(windowCloseSFX);
+    game.end();
 
     CloseAudioDevice();
     CloseWindow();
