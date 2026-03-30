@@ -11,4 +11,4 @@
 -  SFX 
 -  animations
 -  replay
--  and much much more! :)
+-  and much much more!  :)
