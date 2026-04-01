@@ -5,7 +5,7 @@ the classic Pong which I tried to recreate in **C++** using the **Raylib** libra
 
 ---
 
-## Features 
+## Features ℹ️
 
 - **Dynamic Game States:**
 - **Intelligent PvAI:**
@@ -17,15 +17,7 @@ the classic Pong which I tried to recreate in **C++** using the **Raylib** libra
 
 ---
 
-## 🛠️ Tech Stack
-
-- **Language:** C++
-- **Framework:** [raylib](https://www.raylib.com/)
-- **Paradigm:** Object-Oriented Programming (OOP)
-
----
-
-## 📜 License
+## License 📜
 
 This project is open-source and available under the [**MIT License**](LICENSE).
 
