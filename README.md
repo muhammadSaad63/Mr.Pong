@@ -15,10 +15,10 @@ the classic Pong which I tried to recreate in **C++** using the **Raylib** libra
 - **Settings Menu**
 - and much much more!  :)
 
----
-
 ## License 📜
 
 This project is open-source and available under the [**MIT License**](LICENSE).
+
+---
 
 ### للہ الحمد کلہ
